@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { CURRENT_TERM, DUES_AMOUNT_CENTS } from "@/lib/dues/config";
 import { loadDuesContext } from "@/lib/dues/load";
 import { recordDuesPaid } from "@/lib/dues/record";
@@ -8,6 +9,7 @@ import { getTreasurySigner } from "@/lib/solana/treasury";
 // GET /api/dues: this term's dues status for the logged-in member, plus the
 // club's balance for the home screen.
 export async function GET(request: Request) {
+  await connection(); // always run per request; never pre-build this response
   try {
     const ctx = await loadDuesContext(request);
     if (ctx instanceof Response) return ctx;
