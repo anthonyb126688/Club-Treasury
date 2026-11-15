@@ -92,7 +92,7 @@ Decided (Nov 15):
 * New members get devnet USDC loaded into their account automatically at signup, so they can pay dues right away.  
 * When the treasurer approves a queued request, the payout goes out immediately.  
 * The real-club pilot week is dropped. Everything stays on devnet.  
-* The repo owner merges PRs.
+* Solo project: commit directly to `main`.
 
 Still open (decide as we go; ask before assuming):
 
@@ -116,7 +116,7 @@ Still open (decide as we go; ask before assuming):
 
 ## **How we work**
 
-* Small commits on feature branches; open a PR, the repo owner merges  
+* Solo project: small commits directly on `main`, no feature branches or PRs  
 * Before finishing any task: run `npm run lint` and `npm test`  
 * Explain changes in plain English. Some teammates are new to coding.  
 * If a request is ambiguous, ask instead of guessing
