@@ -97,11 +97,14 @@ Decided (Nov 15):
 * Test dollars are our own devnet token, not Circle USDC: Circle's faucet only gives 20 USDC every 2 hours, and the demo needs a \$400 payout.  
 * When the treasurer approves a queued request, the payout goes out immediately.  
 * The real-club pilot week is dropped. Everything stays on devnet.  
-* Solo project: commit directly to `main`.
+* Solo project: commit directly to `main`.  
+* Dues: \$25, once per term (current term "Fall 2026"). Set in `lib/dues/config.ts`; change `CURRENT_TERM` to open a new term. Enforced by a unique (member, term) row in `dues_payments`.  
+* Dues flow: server prepares the payment and signs only as fee payer → member's Privy account approves it silently in the browser → server checks it's the exact payment it prepared, sends it, and adds the ledger entry.  
+* Club starts with \$1,000 of test dollars (`npm run deposit-starting-funds`, on the ledger as a deposit).
 
 Still open (decide as we go; ask before assuming):
 
-* Dues: amount, per term or per year, whether a member can pay twice  
+
 * Numbers: monthly budget per category, daily auto-approve limit  
 * Whether a small receipt that would push a category over budget goes to the treasurer  
 * Duplicate matching: image hash, vendor/date/total, or either one  

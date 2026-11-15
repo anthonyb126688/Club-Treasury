@@ -3,6 +3,7 @@
 import { usePrivy } from "@privy-io/react-auth";
 import { useEffect, useState } from "react";
 import { useEnsureSolanaAccount } from "@/lib/wallets/useEnsureSolanaAccount";
+import { DuesCard } from "./DuesCard";
 
 type BalanceResponse = {
   email: string | null;
@@ -16,6 +17,7 @@ export function MemberHome() {
   const [data, setData] = useState<BalanceResponse | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [welcoming, setWelcoming] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0); // bump to re-fetch the balance
   const failed = loadFailed || account === "failed";
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export function MemberHome() {
     return () => {
       cancelled = true;
     };
-  }, [account, getAccessToken]);
+  }, [account, getAccessToken, reloadKey]);
 
   const email = data?.email ?? user?.email?.address ?? "";
 
@@ -98,6 +100,10 @@ export function MemberHome() {
           </p>
         )}
       </div>
+
+      {!failed && !welcoming && data?.ready && (
+        <DuesCard onPaid={() => setReloadKey((k) => k + 1)} />
+      )}
 
       <button
         type="button"

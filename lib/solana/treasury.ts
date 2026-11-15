@@ -55,7 +55,7 @@ export async function signWithTreasury(instructions: Instruction[]): Promise<Sig
   };
 }
 
-export async function submit(payment: SignedPayment): Promise<void> {
+export async function submit(payment: Pick<SignedPayment, "wire">): Promise<void> {
   const rpc = await getDevnetRpc();
   await rpc
     .sendTransaction(payment.wire as Parameters<typeof rpc.sendTransaction>[0], {
