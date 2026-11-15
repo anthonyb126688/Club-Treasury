@@ -15,31 +15,55 @@ export function MemberHome() {
   const account = useEnsureSolanaAccount();
   const [data, setData] = useState<BalanceResponse | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [welcoming, setWelcoming] = useState(true);
   const failed = loadFailed || account === "failed";
 
   useEffect(() => {
     if (account !== "ready") return;
     let cancelled = false;
-    let tries = 0;
+    const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-    async function load() {
-      try {
-        const token = await getAccessToken();
-        const res = await fetch("/api/balance", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    async function authHeader() {
+      return { Authorization: `Bearer ${await getAccessToken()}` };
+    }
+
+    // New members get a one-time $50. The server makes sure it's only paid
+    // once, so calling this on every visit is safe; for existing members it
+    // answers "sent" straight away.
+    async function welcome() {
+      for (let i = 0; i < 20 && !cancelled; i++) {
+        const res = await fetch("/api/welcome", { method: "POST", headers: await authHeader() });
+        if (res.ok && ((await res.json()) as { status: string }).status === "sent") return;
+        await pause(3000);
+      }
+    }
+
+    async function loadBalance() {
+      for (let i = 0; i < 15 && !cancelled; i++) {
+        const res = await fetch("/api/balance", { headers: await authHeader() });
         if (!res.ok) throw new Error();
         const body = (await res.json()) as BalanceResponse;
         if (cancelled) return;
         setData(body);
-        // Right after a first login the account may still be getting set up.
-        if (!body.ready && ++tries < 15) setTimeout(load, 2000);
-      } catch {
-        if (!cancelled) setLoadFailed(true);
+        if (body.ready) return;
+        await pause(2000);
       }
     }
 
-    load();
+    (async () => {
+      try {
+        await welcome();
+      } catch {
+        // If the welcome can't be paid right now, still show the balance.
+      }
+      if (!cancelled) setWelcoming(false);
+      try {
+        await loadBalance();
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      }
+    })();
+
     return () => {
       cancelled = true;
     };
@@ -68,7 +92,7 @@ export function MemberHome() {
             We couldn&apos;t load your balance. Refresh to try again.
           </p>
         )}
-        {!failed && (account === "checking" || (data && !data.ready)) && (
+        {!failed && (account === "checking" || welcoming || (data && !data.ready)) && (
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             Setting up your account…
           </p>

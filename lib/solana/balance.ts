@@ -1,17 +1,17 @@
 import "server-only";
 import { address } from "@solana/kit";
+import { getDollarMint } from "./mint";
 import { getDevnetRpc } from "./rpc";
-import { USDC_DEVNET_MINT } from "./usdc";
 
 // Read-only: looks up balances. Never touches the treasury key.
 
-/** Total devnet USDC owned by `owner`, in base units (6 decimals). */
-export async function getUsdcBalance(owner: string): Promise<bigint> {
+/** Total club dollars owned by `owner`, in base units (6 decimals). */
+export async function getDollarBalance(owner: string): Promise<bigint> {
   const rpc = await getDevnetRpc();
   const { value } = await rpc
     .getTokenAccountsByOwner(
       address(owner),
-      { mint: address(USDC_DEVNET_MINT) },
+      { mint: getDollarMint() },
       { encoding: "jsonParsed" },
     )
     .send();

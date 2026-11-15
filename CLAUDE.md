@@ -52,8 +52,9 @@ The AI EXTRACTS and EXPLAINS. Code DECIDES and PAYS.
 * Supabase: Postgres for members/dues/requests/budgets, Storage for receipt images  
 * Embedded wallets: Privy (decided Nov 15)  
 * Anthropic API (`@anthropic-ai/sdk`) for receipt reading (image in, JSON out); look up the current model name in Anthropic's docs, don't guess  
-* Solana: `@solana/web3.js` \+ `@solana/spl-token` for devnet USDC transfers; Memo program to attach a receipt hash or dues reference to each transfer  
-* Devnet USDC from Circle's faucet; get the devnet mint address from Circle's docs
+* Solana: `@solana/kit` \+ `@solana-program/token` / `memo` / `system` for devnet transfers; Memo program to attach a receipt hash or dues reference to each transfer  
+* Dollars: the club's own devnet test-dollar token (6 decimals, treasury is the only issuer), set by `CLUB_DOLLAR_MINT`. Created by `scripts/setup-treasury.mts`. Circle's devnet USDC mint is kept in `lib/solana/mint.ts` so switching is a one-line env change.  
+* Server checks Privy logins with `jose` + Privy's public JWKS (not `@privy-io/node`, which conflicts with current `@solana/kit`)
 
 ## **Folder layout**
 
@@ -61,7 +62,10 @@ The AI EXTRACTS and EXPLAINS. Code DECIDES and PAYS.
 * `lib/wallets/` — Privy embedded-wallet setup  
 * `lib/extract/` — receipt reading \+ schema validation  
 * `lib/policy/` — rules engine (pure functions, fully tested)  
-* `lib/solana/` — USDC transfers \+ memo; the ONLY place that touches the club treasury key  
+* `lib/solana/` — dollar transfers \+ memo; the ONLY place that touches the club treasury key (`treasury.ts`). `rpc.ts` refuses any RPC that isn't devnet.  
+* `lib/welcome/` — pure "pay the $50 welcome or not" decision (tested)  
+* `lib/db.ts` — server-only Supabase client (secret key); tables use RLS with no policies  
+* `supabase/migrations/` — database schema  
 * `tests/` — policy tests, including the prompt-injection receipt test
 
 ## **Security rules**
@@ -89,7 +93,8 @@ Day 1 (Nov 12–13): embedded-wallet login working on a deployed Vercel URL. Thi
 Decided (Nov 15):
 
 * Embedded wallets: Privy.  
-* New members get devnet USDC loaded into their account automatically at signup, so they can pay dues right away.  
+* New members get \$50 of test dollars automatically at signup (exactly once, recorded in the `members` table), so they can pay dues right away.  
+* Test dollars are our own devnet token, not Circle USDC: Circle's faucet only gives 20 USDC every 2 hours, and the demo needs a \$400 payout.  
 * When the treasurer approves a queued request, the payout goes out immediately.  
 * The real-club pilot week is dropped. Everything stays on devnet.  
 * Solo project: commit directly to `main`.

@@ -1,5 +1,5 @@
 import { formatUsd } from "@/lib/money";
-import { getUsdcBalance } from "@/lib/solana/balance";
+import { getDollarBalance } from "@/lib/solana/balance";
 import { getMember, verifyAccessToken } from "@/lib/wallets/privy-server";
 
 // GET /api/balance — the logged-in member's email and dollar balance.
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       // Account is still being set up right after first login.
       return Response.json({ email: member.email, balance: null, ready: false });
     }
-    const units = await getUsdcBalance(member.solanaAddress);
+    const units = await getDollarBalance(member.solanaAddress);
     return Response.json({
       email: member.email,
       balance: formatUsd(units),
