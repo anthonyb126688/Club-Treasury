@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "deposit-starting-funds": "tsx --conditions=react-server scripts/deposit-starting-funds.mts",
-    "send-test-dollar": "tsx --conditions=react-server scripts/send-test-dollar.mts"
+    "send-test-dollar": "tsx --conditions=react-server scripts/send-test-dollar.mts",
+    "read-receipt": "tsx --conditions=react-server scripts/read-receipt.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.9.0",

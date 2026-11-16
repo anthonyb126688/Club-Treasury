@@ -126,9 +126,11 @@ export function decideReimbursement(
   }
 
   if (validTotal && ctx.clubAutoApprovedTodayCents + total > rules.dailyAutoApproveLimitCents) {
+    const already = ctx.clubAutoApprovedTodayCents;
     add(
       "daily_limit",
-      `The club has already auto-paid ${formatCents(ctx.clubAutoApprovedTodayCents)} today; the daily limit is ${formatCents(rules.dailyAutoApproveLimitCents)}.`,
+      `This would go over the club's ${formatCents(rules.dailyAutoApproveLimitCents)} daily limit for automatic payouts` +
+        (already > 0 ? ` (${formatCents(already)} already paid today).` : "."),
     );
   }
 
