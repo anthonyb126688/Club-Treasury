@@ -231,7 +231,17 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
   const row = await loadPayoutRow(requestId);
 
   // Treasurer-approved, paid through a Squads proposal.
-  if (row.squads_transaction_index !== null && row.status !== "payment_failed") {
+  if (row.squads_transaction_index !== null && squadsConfig()) {
+    if (row.status === "payment_failed") {
+      // Failed outside the vault (e.g. before it was set up): back to the
+      // treasurer, who approves it through its proposal.
+      await db()
+        .from("reimbursement_requests")
+        .update({ status: "queued", payout_error: null, decided_by: null, decided_at: null, payout_signature: null, payout_claimed_at: null })
+        .eq("id", row.id)
+        .eq("status", "payment_failed");
+      return "queued";
+    }
     return settleProposalPayout(row);
   }
 
