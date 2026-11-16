@@ -102,6 +102,11 @@ Decided (Nov 15):
 * Dues flow: server prepares the payment and signs only as fee payer → member's Privy account approves it silently in the browser → server checks it's the exact payment it prepared, sends it, and adds the ledger entry.  
 * Club starts with \$1,000 of test dollars (`npm run deposit-starting-funds`, on the ledger as a deposit).
 
+Decided (Nov 16):
+
+* Public ledger: the treasurer (members.role = 'treasurer') sees who paid by email; everyone else sees only a shortened account address like "7xKp…3fQa". Filtered on the server (`lib/ledger/`), so emails never reach other browsers.
+* The ledger page refreshes every 5 seconds, and each row has a Verify link to Solana Explorer (devnet).
+
 Still open (decide as we go; ask before assuming):
 
 

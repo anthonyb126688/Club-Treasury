@@ -1,6 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useEnsureSolanaAccount } from "@/lib/wallets/useEnsureSolanaAccount";
 import { DuesCard } from "./DuesCard";
@@ -104,6 +105,13 @@ export function MemberHome() {
       {!failed && !welcoming && data?.ready && (
         <DuesCard onPaid={() => setReloadKey((k) => k + 1)} />
       )}
+
+      <Link
+        href="/ledger"
+        className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-center font-medium dark:border-zinc-800"
+      >
+        See where the money goes
+      </Link>
 
       <button
         type="button"
