@@ -5,6 +5,7 @@ import { decideReimbursement } from "@/lib/policy/decide";
 import { CATEGORIES, type Category } from "@/lib/policy/rules";
 import {
   currentMember,
+  ensureProposal,
   loadPolicyContext,
   loadRules,
   payOut,
@@ -101,10 +102,24 @@ export async function POST(request: Request) {
     if (updateError) throw new Error(`submit: ${updateError.message}`);
     if (!updated?.length) return Response.json({ error: "already_submitted" }, { status: 409 });
 
-    if (!auto) return Response.json({ status: "pending" });
+    if (!auto) {
+      // Open the Squads proposal the treasurer will approve (best effort:
+      // it's created again on the treasurer's Approve tap if this fails).
+      await ensureProposal(row.id).catch((e) => console.error("proposal:", (e as Error).message));
+      return Response.json({ status: "pending" });
+    }
 
     const payout = await payOut(row.id);
-    return Response.json({ status: payout === "paid" ? "reimbursed" : payout === "failed" ? "delayed" : "paying" });
+    return Response.json({
+      status:
+        payout === "paid"
+          ? "reimbursed"
+          : payout === "queued"
+            ? "pending"
+            : payout === "failed"
+              ? "delayed"
+              : "paying",
+    });
   } catch (err) {
     console.error("reimburse submit failed:", (err as Error).message);
     return Response.json({ error: "unavailable" }, { status: 502 });

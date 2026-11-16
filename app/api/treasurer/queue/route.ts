@@ -5,6 +5,7 @@ import type { ReviewReason } from "@/lib/policy/decide";
 import { CATEGORY_LABELS, type Category } from "@/lib/policy/rules";
 import { GROUP_ORDER, GROUP_TITLES, groupFor, type GroupCode } from "@/lib/reimburse/groups";
 import { currentMember, photoLinks } from "@/lib/reimburse/server";
+import { squadsConfig } from "@/lib/solana/squads";
 
 // GET /api/treasurer/queue: everything waiting on the treasurer, grouped by
 // reason, with receipt photos. Treasurer only.
@@ -113,6 +114,9 @@ export async function GET(request: Request) {
     }
 
     return Response.json({
+      // Approvals go through the Squads vault (the treasurer's own account
+      // approves each payment) once it's set up.
+      onChain: squadsConfig() !== null,
       pendingCount: rows.length,
       pendingTotal: formatCents(pendingCents),
       groups: GROUP_ORDER.filter((g) => groups.has(g)).map((g) => ({

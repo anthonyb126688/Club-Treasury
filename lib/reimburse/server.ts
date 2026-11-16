@@ -1,11 +1,22 @@
 import "server-only";
 import { db } from "@/lib/db";
-import type { PolicyContext } from "@/lib/policy/decide";
+import { centsToUnits } from "@/lib/money";
+import type { PolicyContext, ReviewReason } from "@/lib/policy/decide";
 import { CATEGORY_LABELS, DEFAULT_RULES, type Category, type PolicyRules } from "@/lib/policy/rules";
-import { getChainStatus, submit, waitForConfirmation } from "@/lib/solana/treasury";
+import { isSpendingLimitExceeded } from "@/lib/solana/allowance";
+import { checkApprovedPayment } from "@/lib/solana/dues";
+import {
+  allowanceLeft,
+  allowancePaymentInstructions,
+  createPaymentProposal,
+  isVaultApprover,
+  prepareProposalApproval,
+  squadsConfig,
+} from "@/lib/solana/squads";
+import { getChainStatus, signWithTreasury, submit, waitForConfirmation } from "@/lib/solana/treasury";
 import { signDollarTransfer } from "@/lib/solana/transfer";
 import { verifyAccessToken } from "@/lib/wallets/privy-server";
-import { decidePayout, type PayoutRow, type RequestStatus } from "./decide";
+import { decidePayout, decideProposalPayout, type PayoutRow, type RequestStatus } from "./decide";
 
 export const RECEIPT_BUCKET = "receipts";
 
@@ -109,21 +120,44 @@ export async function loadPolicyContext(args: {
   };
 }
 
+// ---- Payouts ----------------------------------------------------------------
+
 type PayoutRequestRow = PayoutRow & {
   id: string;
   privy_user_id: string;
   total_cents: number;
   category: Category;
   vendor: string | null;
+  receipt_image_hash: string;
+  squads_transaction_index: number | string | null;
+  approval_tx: string | null;
   member: { solana_address: string } | null;
 };
 
-export type PayoutResult = "paid" | "processing" | "failed" | "not_payable";
+const PAYOUT_SELECT =
+  "id, privy_user_id, status, total_cents, category, vendor, receipt_image_hash, payout_signature, payout_claimed_at, squads_transaction_index, approval_tx, member:members(solana_address)";
+
+async function loadPayoutRow(requestId: string): Promise<PayoutRequestRow> {
+  const { data, error } = await db()
+    .from("reimbursement_requests")
+    .select(PAYOUT_SELECT)
+    .eq("id", requestId)
+    .single();
+  if (error) throw new Error(`payout lookup: ${error.message}`);
+  return data as unknown as PayoutRequestRow;
+}
+
+/** Public memo on every payout: request id + receipt fingerprint (no personal data). */
+function payoutMemo(row: Pick<PayoutRequestRow, "id" | "receipt_image_hash">): string {
+  return `club-treasury:reimbursement:${row.id}:${row.receipt_image_hash}`;
+}
+
+export type PayoutResult = "paid" | "processing" | "failed" | "not_payable" | "queued";
 
 async function recordPaid(row: PayoutRequestRow, signature: string) {
   const { error } = await db()
     .from("reimbursement_requests")
-    .update({ status: "paid", paid_at: new Date().toISOString(), payout_error: null })
+    .update({ status: "paid", paid_at: new Date().toISOString(), payout_error: null, approval_tx: null })
     .eq("id", row.id);
   if (error) throw new Error(`payout update: ${error.message}`);
 
@@ -153,21 +187,53 @@ async function markFailed(id: string, message: string) {
     .eq("id", id);
 }
 
+const ALLOWANCE_USED_UP: ReviewReason = {
+  code: "daily_limit",
+  message: "The club's automatic payout allowance is used up for now, so this needs the treasurer.",
+};
+
+/**
+ * The server's daily allowance can't cover this one: hand it to the
+ * treasurer instead (and open a proposal for them to approve).
+ */
+async function sendToTreasurer(row: PayoutRequestRow): Promise<PayoutResult> {
+  const { data, error } = await db()
+    .from("reimbursement_requests")
+    .update({
+      status: "queued",
+      review_group: ALLOWANCE_USED_UP.code,
+      review_reasons: [ALLOWANCE_USED_UP],
+      decision_reason: ALLOWANCE_USED_UP.message,
+      decided_by: null,
+      decided_at: null,
+      payout_signature: null,
+      payout_claimed_at: null,
+    })
+    .eq("id", row.id)
+    .in("status", ["auto_approved", "payment_failed"])
+    .select("id");
+  if (error) throw new Error(`send to treasurer: ${error.message}`);
+  if (data?.length) await ensureProposal(row.id).catch((e) => console.error("proposal:", (e as Error).message));
+  return "queued";
+}
+
 /**
  * Pay out an approved request, exactly once. Safe to call repeatedly and
  * from several requests at once: the row is claimed before anything is
  * signed, and the signature is saved before anything is sent.
+ *
+ * With the Squads vault set up, instant (policy-approved) payouts use the
+ * server's daily allowance. Treasurer-approved payouts are sent by the
+ * treasurer's own account (submitTreasurerApproval); here we only check on them.
  */
 export async function payOut(requestId: string): Promise<PayoutResult> {
   const requests = () => db().from("reimbursement_requests");
-  const { data, error } = await requests()
-    .select(
-      "id, privy_user_id, status, total_cents, category, vendor, payout_signature, payout_claimed_at, member:members(solana_address)",
-    )
-    .eq("id", requestId)
-    .single();
-  if (error) throw new Error(`payout lookup: ${error.message}`);
-  const row = data as unknown as PayoutRequestRow;
+  const row = await loadPayoutRow(requestId);
+
+  // Treasurer-approved, paid through a Squads proposal.
+  if (row.squads_transaction_index !== null && row.status !== "payment_failed") {
+    return settleProposalPayout(row);
+  }
 
   const chain = row.payout_signature ? await getChainStatus(row.payout_signature) : null;
   const decision = decidePayout(row, new Date(), chain);
@@ -177,6 +243,11 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
   if (decision === "mark_paid") {
     await recordPaid(row, row.payout_signature!);
     return "paid";
+  }
+
+  const config = squadsConfig();
+  if (config && row.total_cents && (await allowanceLeft(config)) < centsToUnits(row.total_cents)) {
+    return sendToTreasurer(row);
   }
 
   // send: claim the row first, only if nobody else changed it meanwhile.
@@ -206,11 +277,11 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
 
   let payment;
   try {
-    payment = await signDollarTransfer(
-      row.member.solana_address,
-      row.total_cents,
-      `club-treasury:reimbursement:${row.id}`,
-    );
+    payment = config
+      ? await signWithTreasury(
+          await allowancePaymentInstructions(config, row.member.solana_address, row.total_cents, payoutMemo(row)),
+        )
+      : await signDollarTransfer(row.member.solana_address, row.total_cents, payoutMemo(row));
   } catch (err) {
     const message = (err as Error).message.includes("enough dollars")
       ? "The club doesn't have enough money for this payout."
@@ -229,6 +300,10 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
   try {
     await submit(payment);
   } catch (err) {
+    if (isSpendingLimitExceeded(err)) {
+      // Squads refused: over the daily allowance. Nothing was sent.
+      return sendToTreasurer({ ...row, status: "payment_failed" });
+    }
     // It may or may not have reached the network; the next check finds out.
     console.error("payout send failed:", (err as Error).message);
     return "processing";
@@ -241,6 +316,162 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
   }
   if (result === "failed") {
     await markFailed(row.id, "The payout didn't go through. Try again.");
+    return "failed";
+  }
+  return "processing";
+}
+
+// ---- Treasurer approvals through Squads ---------------------------------------
+
+/** Put a request back in the treasurer's queue (its approval never landed). */
+async function reopen(row: PayoutRequestRow) {
+  await db()
+    .from("reimbursement_requests")
+    .update({
+      status: "queued",
+      decided_by: null,
+      decided_at: null,
+      payout_signature: null,
+      payout_claimed_at: null,
+      approval_tx: null,
+    })
+    .eq("id", row.id)
+    .eq("status", "approved");
+}
+
+async function settleProposalPayout(row: PayoutRequestRow): Promise<PayoutResult> {
+  const chain = row.payout_signature ? await getChainStatus(row.payout_signature) : null;
+  const decision = decideProposalPayout(row, new Date(), chain);
+  if (decision === "done") return "paid";
+  if (decision === "not_payable") return "not_payable";
+  if (decision === "wait") return "processing";
+  if (decision === "mark_paid") {
+    await recordPaid(row, row.payout_signature!);
+    return "paid";
+  }
+  await reopen(row);
+  return "queued";
+}
+
+/** Make sure a queued request has a Squads proposal. Returns its index (or null without Squads). */
+export async function ensureProposal(requestId: string): Promise<bigint | null> {
+  const config = squadsConfig();
+  if (!config) return null;
+  const row = await loadPayoutRow(requestId);
+  if (row.squads_transaction_index !== null) return BigInt(row.squads_transaction_index);
+  if (row.status !== "queued" || !row.member?.solana_address || !row.total_cents) return null;
+
+  const index = await createPaymentProposal(
+    config,
+    row.member.solana_address,
+    row.total_cents,
+    payoutMemo(row),
+  );
+  await db()
+    .from("reimbursement_requests")
+    .update({ squads_transaction_index: index.toString() })
+    .eq("id", row.id)
+    .is("squads_transaction_index", null);
+  return index;
+}
+
+export type ApprovalStart =
+  | { status: "ready"; transaction: string }
+  | { status: "processing" | "paid" | "not_found" | "not_approver" | "unavailable" };
+
+/**
+ * Step 1 of the treasurer's Approve tap: build "approve + pay" for their
+ * account to approve (silently, in the browser).
+ */
+export async function startTreasurerApproval(
+  requestId: string,
+  treasurer: CurrentMember,
+): Promise<ApprovalStart> {
+  const config = squadsConfig();
+  if (!config) return { status: "unavailable" };
+  if (!(await isVaultApprover(config, treasurer.solanaAddress))) return { status: "not_approver" };
+
+  let row = await loadPayoutRow(requestId);
+  if (row.status === "approved") {
+    const settled = await payOut(row.id);
+    if (settled === "paid") return { status: "paid" };
+    if (settled === "processing") return { status: "processing" };
+    row = await loadPayoutRow(requestId);
+  }
+  if (row.status === "paid") return { status: "paid" };
+  if (row.status !== "queued") return { status: "not_found" };
+
+  let index = await ensureProposal(row.id);
+  if (index === null) return { status: "unavailable" };
+  let prep = await prepareProposalApproval(config, index, treasurer.solanaAddress);
+  if (prep.status === "unavailable") {
+    // The old proposal is gone or closed: open a fresh one.
+    await db().from("reimbursement_requests").update({ squads_transaction_index: null }).eq("id", row.id);
+    index = await ensureProposal(row.id);
+    if (index === null) return { status: "unavailable" };
+    prep = await prepareProposalApproval(config, index, treasurer.solanaAddress);
+  }
+  if (prep.status === "executed") return { status: "unavailable" };
+  if (prep.status !== "ready") return { status: "unavailable" };
+
+  const { error } = await db()
+    .from("reimbursement_requests")
+    .update({
+      approval_tx: prep.payment.wire,
+      payout_signature: prep.payment.signature,
+      payout_claimed_at: new Date().toISOString(),
+    })
+    .eq("id", row.id)
+    .eq("status", "queued");
+  if (error) throw new Error(`approval save: ${error.message}`);
+  return { status: "ready", transaction: prep.payment.wire };
+}
+
+/**
+ * Step 2: the treasurer's account approved it. Check it's exactly what we
+ * prepared, send it, and record the payout.
+ */
+export async function finishTreasurerApproval(
+  requestId: string,
+  treasurer: CurrentMember,
+  signedWire: string,
+): Promise<"paid" | "processing" | "failed" | "conflict"> {
+  const row = await loadPayoutRow(requestId);
+  if (row.status !== "queued" || !row.payout_signature || !row.approval_tx) return "conflict";
+
+  let wire: string;
+  try {
+    wire = checkApprovedPayment(signedWire, row.payout_signature, treasurer.solanaAddress);
+  } catch {
+    return "conflict";
+  }
+
+  const { data: claimed, error } = await db()
+    .from("reimbursement_requests")
+    .update({ status: "approved", decided_by: treasurer.userId, decided_at: new Date().toISOString() })
+    .eq("id", row.id)
+    .eq("status", "queued")
+    .eq("payout_signature", row.payout_signature)
+    .select("id");
+  if (error) throw new Error(`approve: ${error.message}`);
+  if (!claimed?.length) return "conflict";
+  const approved = { ...row, status: "approved" as const };
+
+  try {
+    await submit({ wire });
+  } catch (err) {
+    console.error("approval send failed:", (err as Error).message);
+    await reopen(approved);
+    return "failed";
+  }
+
+  const result = await waitForConfirmation(row.payout_signature);
+  if (result === "confirmed") {
+    await recordPaid(approved, row.payout_signature);
+    return "paid";
+  }
+  if (result === "failed") {
+    await reopen(approved);
     return "failed";
   }
   return "processing";

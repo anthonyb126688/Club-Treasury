@@ -10,7 +10,13 @@
     "test": "vitest run",
     "deposit-starting-funds": "tsx --conditions=react-server scripts/deposit-starting-funds.mts",
     "send-test-dollar": "tsx --conditions=react-server scripts/send-test-dollar.mts",
-    "read-receipt": "tsx --conditions=react-server scripts/read-receipt.mts"
+    "read-receipt": "tsx --conditions=react-server scripts/read-receipt.mts",
+    "setup-squads": "tsx --conditions=react-server scripts/setup-squads.mts",
+    "add-spending-limit": "tsx --conditions=react-server scripts/add-spending-limit.mts",
+    "move-funds-to-vault": "tsx --conditions=react-server scripts/move-funds-to-vault.mts",
+    "pay-from-allowance": "tsx --conditions=react-server scripts/pay-from-allowance.mts",
+    "try-overspend": "tsx --conditions=react-server scripts/try-overspend.mts",
+    "check-proposals": "tsx --conditions=react-server scripts/check-proposals.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.9.0",
@@ -19,6 +25,7 @@
     "@solana-program/system": "^0.16.0",
     "@solana-program/token": "^0.18.0",
     "@solana/kit": "^8.6.0",
+    "@sqds/multisig": "^2.1.4",
     "@supabase/supabase-js": "^2.119.0",
     "jose": "^6.2.17",
     "next": "16.4.6",

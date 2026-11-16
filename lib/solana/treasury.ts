@@ -13,6 +13,7 @@ import {
   type Instruction,
   type KeyPairSigner,
 } from "@solana/kit";
+import { Keypair } from "@solana/web3.js";
 import type { ChainStatus } from "@/lib/welcome/decide";
 import { getDevnetRpc } from "./rpc";
 
@@ -28,6 +29,20 @@ export function getTreasurySigner(): Promise<KeyPairSigner> {
     return createKeyPairSignerFromBytes(getBase58Encoder().encode(secret));
   })();
   return signer;
+}
+
+let web3Keypair: Keypair | null = null;
+
+/**
+ * The same treasury key as a @solana/web3.js v1 Keypair, for the Squads SDK
+ * (lib/solana/squads.ts and scripts only). Never log or return it.
+ */
+export function getTreasuryKeypairForSquads(): Keypair {
+  if (web3Keypair) return web3Keypair;
+  const secret = process.env.TREASURY_SECRET_KEY;
+  if (!secret) throw new Error("TREASURY_SECRET_KEY is not set");
+  web3Keypair = Keypair.fromSecretKey(new Uint8Array(getBase58Encoder().encode(secret)));
+  return web3Keypair;
 }
 
 export type SignedPayment = { signature: string; wire: string };

@@ -1,8 +1,10 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
+import { useSignTransaction } from "@privy-io/react-auth/solana";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 
 type Photo = string | null;
 
@@ -34,7 +36,10 @@ type Item = {
 };
 
 type Group = { code: string; title: string; hint: string; items: Item[] };
-type Queue = { pendingCount: number; pendingTotal: string; groups: Group[] };
+type Queue = { onChain: boolean; pendingCount: number; pendingTotal: string; groups: Group[] };
+
+const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 
 const STATUS_WORDS: Record<string, string> = {
   paid: "already paid",
@@ -205,6 +210,8 @@ function RequestCard({
 // needs a human. Approving pays out immediately.
 export default function TreasurerPage() {
   const { ready, authenticated, getAccessToken } = usePrivy();
+  const account = useMemberAccount();
+  const { signTransaction } = useSignTransaction();
   const [queue, setQueue] = useState<Queue | null>(null);
   const [problem, setProblem] = useState<"forbidden" | "failed" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -232,10 +239,50 @@ export default function TreasurerPage() {
     return () => clearInterval(timer);
   }, [ready, authenticated, load]);
 
+  // Approve through the club vault: the treasurer's own account approves the
+  // payment (silently, no pop-up), then the vault pays the member.
+  async function approveOnChain(item: Item): Promise<string> {
+    const auth = { Authorization: `Bearer ${await getAccessToken()}`, "Content-Type": "application/json" };
+    const prep = await fetch("/api/treasurer/approve/prepare", {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ id: item.id }),
+    });
+    const p = (await prep.json().catch(() => ({}))) as { status?: string; transaction?: string };
+    if (p.status === "paid") return `Already paid ${item.amount}.`;
+    if (p.status === "processing") return `The ${item.amount} payout is already on its way.`;
+    if (p.status === "not_approver") return "Your account isn't set up as the club's approver.";
+    if (prep.status === 409) return "Someone already decided that one.";
+    if (!prep.ok || p.status !== "ready" || !p.transaction || !account) {
+      return "That didn't work. Try again.";
+    }
+
+    const { signedTransaction } = await signTransaction({
+      transaction: fromBase64(p.transaction),
+      wallet: account,
+      chain: "solana:devnet",
+    });
+
+    const sub = await fetch("/api/treasurer/approve/submit", {
+      method: "POST",
+      headers: auth,
+      body: JSON.stringify({ id: item.id, transaction: toBase64(signedTransaction) }),
+    });
+    const s = (await sub.json().catch(() => ({}))) as { status?: string };
+    if (s.status === "paid") return `Paid ${item.amount} to ${item.memberEmail ?? "the member"}.`;
+    if (s.status === "processing") return `Approved. The ${item.amount} payout is on its way.`;
+    if (sub.status === 409) return "That changed while you were approving. Refresh and try again.";
+    return "The payout didn't go through. It's back in the queue; try again.";
+  }
+
   async function act(item: Item, action: "approve" | "reject" | "retry") {
     setBusyId(item.id);
     setNotice(null);
     try {
+      if (action === "approve" && queue?.onChain) {
+        setNotice(await approveOnChain(item));
+        return;
+      }
       const res = await fetch("/api/treasurer/decide", {
         method: "POST",
         headers: {

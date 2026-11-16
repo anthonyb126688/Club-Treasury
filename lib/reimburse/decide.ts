@@ -48,6 +48,34 @@ export function decidePayout(row: PayoutRow, now: Date, chain: ChainStatus | nul
   return age > PAYOUT_STALE_AFTER_MS ? "send" : "wait";
 }
 
+export type ProposalPayoutDecision =
+  | "done" // already paid
+  | "not_payable" // still waiting for the treasurer (or rejected)
+  | "mark_paid" // the treasurer's approve + pay landed; record it
+  | "wait" // it's in flight
+  | "reopen"; // it never landed: put it back in the treasurer's queue
+
+/**
+ * For requests paid through a Squads proposal (the treasurer's approval).
+ * The server never sends these itself; it only works out what happened.
+ */
+export function decideProposalPayout(
+  row: PayoutRow,
+  now: Date,
+  chain: ChainStatus | null,
+): ProposalPayoutDecision {
+  if (row.status === "paid") return "done";
+  if (row.status !== "approved") return "not_payable";
+  if (!row.payout_signature) return "reopen";
+  if (chain === "confirmed") return "mark_paid";
+  if (chain === "processing") return "wait";
+  if (chain === "failed") return "reopen";
+  const age = row.payout_claimed_at
+    ? now.getTime() - new Date(row.payout_claimed_at).getTime()
+    : Number.POSITIVE_INFINITY;
+  return age > PAYOUT_STALE_AFTER_MS ? "reopen" : "wait";
+}
+
 export type MemberStatus = "paying" | "reimbursed" | "pending" | "not_approved" | "delayed";
 
 /** What the member sees for each request. Drafts ("submitted") aren't shown. */

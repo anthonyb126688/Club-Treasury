@@ -55,6 +55,19 @@ The AI EXTRACTS and EXPLAINS. Code DECIDES and PAYS.
 * Solana: `@solana/kit` \+ `@solana-program/token` / `memo` / `system` for devnet transfers; Memo program to attach a receipt hash or dues reference to each transfer  
 * Dollars: the club's own devnet test-dollar token (6 decimals, treasury is the only issuer), set by `CLUB_DOLLAR_MINT`. Created by `scripts/setup-treasury.mts`. Circle's devnet USDC mint is kept in `lib/solana/mint.ts` so switching is a one-line env change.  
 * Server checks Privy logins with `jose` + Privy's public JWKS (not `@privy-io/node`, which conflicts with current `@solana/kit`)
+* Smart contracts: we never write or deploy our own Solana programs. We DO use the existing, audited Squads v4 multisig program on devnet (`SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf`) through `@sqds/multisig`. That SDK uses `@solana/web3.js` v1; keep it server-side, inside `lib/solana/squads.ts` and `scripts/`.
+
+## **Squads vault (branch `feature-squads`, decided Nov 16)**
+
+* The club's dollars live in a Squads vault (vault index 0), not in the old treasury wallet. Dues are paid into the vault, the "club balance" is the vault's balance, and every payout comes out of it.
+* The treasurer is the multisig's only voting member (threshold 1). Payments the policy sends to the treasurer become Squads proposals; the treasurer's Approve tap approves and executes the proposal on-chain with their Privy account (silently, no crypto words).
+* The server key is a propose-only member (Initiate permission): it can open proposals but can never vote or execute one.
+* The server key may spend up to the daily auto-approve limit ($150, `lib/policy/rules.ts`) per day from the vault through a Squads spending limit, used only for instant reimbursements. The blockchain enforces this cap: "Even if our server were hacked, it couldn't spend more than $150 a day."
+* The setup scripts create the multisig with the server as temporary config authority, add the spending limit, then permanently remove the config authority. After that, nobody can change members or limits without the treasurer's vote.
+* The old treasury key still pays network fees and issues test dollars ($50 welcome money, deposits), but holds no club money.
+* Never send funds to the multisig address itself, only to the vault address.
+* Addresses come from env: `SQUADS_MULTISIG_ADDRESS`, `SQUADS_VAULT_ADDRESS`, `SQUADS_SPENDING_LIMIT_ADDRESS`. If they're unset, the app falls back to the old treasury wallet.
+* Branch rule: all Squads work happens on `feature-squads` and is merged to `main` only once it works end to end.
 
 ## **Folder layout**
 
@@ -62,7 +75,7 @@ The AI EXTRACTS and EXPLAINS. Code DECIDES and PAYS.
 * `lib/wallets/` — Privy embedded-wallet setup  
 * `lib/extract/` — receipt reading \+ schema validation  
 * `lib/policy/` — rules engine (pure functions, fully tested)  
-* `lib/solana/` — dollar transfers \+ memo; the ONLY place that touches the club treasury key (`treasury.ts`). `rpc.ts` refuses any RPC that isn't devnet.  
+* `lib/solana/` — dollar transfers \+ memo; the ONLY place that touches the club treasury key (`treasury.ts`). `rpc.ts` refuses any RPC that isn't devnet. `squads.ts` talks to the Squads vault.  
 * `lib/welcome/` — pure "pay the $50 welcome or not" decision (tested)  
 * `lib/db.ts` — server-only Supabase client (secret key); tables use RLS with no policies  
 * `supabase/migrations/` — database schema  

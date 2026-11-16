@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Playwright MCP screenshots and logs
 /.playwright-mcp
+
+# Template with variable names only (no values)
+!.env.example

@@ -24,12 +24,14 @@ import { getDollarBalance } from "./balance";
 import { validateMemo } from "./memo";
 import { DOLLAR_DECIMALS, getDollarMint } from "./mint";
 import { getDevnetRpc } from "./rpc";
+import { clubHolderAddress } from "./squads";
 import { getTreasurySigner, type SignedPayment } from "./treasury";
 
 export class NotEnoughMoneyError extends Error {}
 
 /**
- * Build a dues payment from the member to the club treasury.
+ * Build a dues payment from the member to the club (the Squads vault once
+ * it's set up, otherwise the old treasury wallet).
  *
  * The treasury signs now as FEE PAYER only (members never need SOL). The
  * member still has to approve it in the browser. Because the treasury's
@@ -57,7 +59,11 @@ export async function prepareDuesPayment(
   const member = createNoopSigner(address(memberAddress)); // signs later, in the browser
   const [[from], [to]] = await Promise.all([
     findAssociatedTokenPda({ owner: member.address, mint, tokenProgram: TOKEN_PROGRAM_ADDRESS }),
-    findAssociatedTokenPda({ owner: treasury.address, mint, tokenProgram: TOKEN_PROGRAM_ADDRESS }),
+    findAssociatedTokenPda({
+      owner: address(await clubHolderAddress()),
+      mint,
+      tokenProgram: TOKEN_PROGRAM_ADDRESS,
+    }),
   ]);
   const { value: blockhash } = await rpc.getLatestBlockhash().send();
 
@@ -88,6 +94,18 @@ export async function prepareDuesPayment(
     signature: getSignatureFromTransaction(tx),
     wire: getBase64EncodedWireTransaction(tx),
   };
+}
+
+/**
+ * Same check for any payment the server prepared (fee payer signed) and a
+ * member's account then approved, e.g. the treasurer's Squads approval.
+ */
+export function checkApprovedPayment(
+  wireBase64: string,
+  expectedSignature: string,
+  approverAddress: string,
+): string {
+  return checkApprovedDuesPayment(wireBase64, expectedSignature, approverAddress);
 }
 
 /**

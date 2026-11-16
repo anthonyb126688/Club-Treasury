@@ -4,7 +4,7 @@ import { loadDuesContext } from "@/lib/dues/load";
 import { recordDuesPaid } from "@/lib/dues/record";
 import { formatUsd, centsToUnits } from "@/lib/money";
 import { getDollarBalance } from "@/lib/solana/balance";
-import { getTreasurySigner } from "@/lib/solana/treasury";
+import { clubHolderAddress } from "@/lib/solana/squads";
 
 // GET /api/dues: this term's dues status for the logged-in member, plus the
 // club's balance for the home screen.
@@ -22,12 +22,11 @@ export async function GET(request: Request) {
     } else if (ctx.decision === "wait") status = "pending";
     else status = "unpaid"; // claim_new, retry, resume: the button is available
 
-    const treasury = await getTreasurySigner();
     return Response.json({
       term: CURRENT_TERM.label,
       amount: formatUsd(centsToUnits(DUES_AMOUNT_CENTS)),
       status,
-      clubBalance: formatUsd(await getDollarBalance(treasury.address)),
+      clubBalance: formatUsd(await getDollarBalance(await clubHolderAddress())),
     });
   } catch (err) {
     console.error("dues status failed:", (err as Error).message);

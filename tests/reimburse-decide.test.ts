@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   decidePayout,
+  decideProposalPayout,
   memberStatus,
   parseDollarsToCents,
   type PayoutRow,
@@ -54,6 +55,34 @@ describe("decidePayout", () => {
   it("retries a payout that failed on-chain", () => {
     const row = { ...fresh, payout_signature: "sig", payout_claimed_at: secondsAgo(10) };
     expect(decidePayout(row, now, "failed")).toBe("send");
+  });
+});
+
+describe("decideProposalPayout (treasurer-approved, via Squads)", () => {
+  const approved: PayoutRow = { status: "approved", payout_signature: "sig", payout_claimed_at: secondsAgo(5) };
+
+  it("records the payout once the treasurer's approval lands", () => {
+    expect(decideProposalPayout(approved, now, "confirmed")).toBe("mark_paid");
+  });
+
+  it("waits while it's in flight", () => {
+    expect(decideProposalPayout(approved, now, "processing")).toBe("wait");
+    expect(decideProposalPayout(approved, now, "not_found")).toBe("wait");
+  });
+
+  it("puts it back in the queue if it never landed or failed", () => {
+    expect(decideProposalPayout({ ...approved, payout_claimed_at: secondsAgo(180) }, now, "not_found")).toBe("reopen");
+    expect(decideProposalPayout(approved, now, "failed")).toBe("reopen");
+    expect(decideProposalPayout({ ...approved, payout_signature: null }, now, null)).toBe("reopen");
+  });
+
+  it("never acts on a request still waiting for the treasurer", () => {
+    expect(decideProposalPayout({ ...approved, status: "queued" }, now, "confirmed")).toBe("not_payable");
+    expect(decideProposalPayout({ ...approved, status: "rejected" }, now, "confirmed")).toBe("not_payable");
+  });
+
+  it("is done once paid", () => {
+    expect(decideProposalPayout({ ...approved, status: "paid" }, now, null)).toBe("done");
   });
 });
 
