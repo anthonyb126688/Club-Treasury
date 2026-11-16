@@ -13,6 +13,11 @@ export function validateMemo(memo: string): string {
   return memo;
 }
 
+/** Link to an account (e.g. the club vault) on Solana Explorer (devnet). */
+export function explorerAddressUrl(addr: string): string {
+  return `https://explorer.solana.com/address/${encodeURIComponent(addr)}/tokens?cluster=devnet`;
+}
+
 /** Link to a payment on Solana Explorer (devnet). Used by "Verify" links. */
 export function explorerTxUrl(signature: string): string {
   return `https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=devnet`;

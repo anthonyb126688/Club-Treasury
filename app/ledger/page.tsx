@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { LedgerItem } from "@/lib/ledger/view";
 
-type LedgerResponse = { entries: LedgerItem[]; showingNames: boolean };
+type LedgerResponse = { entries: LedgerItem[]; showingNames: boolean; vaultUrl: string | null };
 
 const REFRESH_MS = 5000;
 
@@ -58,6 +58,23 @@ export default function LedgerPage() {
       <p className="text-sm text-zinc-600 dark:text-zinc-400">
         Every dollar that comes in or goes out of the club. Tap Verify to see the public record.
       </p>
+
+      {data?.vaultUrl && (
+        <a
+          href={data.vaultUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800"
+        >
+          <span>
+            <span className="block font-medium">View the club vault ↗</span>
+            <span className="block text-sm text-zinc-600 dark:text-zinc-400">
+              The club&apos;s money is held in a Squads vault on Solana. Anyone can check the balance and every
+              payment in and out.
+            </span>
+          </span>
+        </a>
+      )}
 
       {failed && !data && (
         <p role="alert" className="text-sm text-red-600">
