@@ -3,6 +3,7 @@
 // a shortened account address. This runs on the SERVER, so emails never
 // reach a non-treasurer's browser at all.
 import { centsToUnits, formatUsd } from "@/lib/money";
+import { explorerTxUrl } from "@/lib/solana/memo";
 
 export type LedgerRow = {
   id: string;
@@ -32,9 +33,7 @@ export function shortAddress(address: string): string {
 }
 
 /** Public Solana Explorer page for this payment (devnet only). */
-export function verifyUrl(signature: string): string {
-  return `https://explorer.solana.com/tx/${encodeURIComponent(signature)}?cluster=devnet`;
-}
+export const verifyUrl = explorerTxUrl;
 
 export function toLedgerItem(row: LedgerRow, viewerIsTreasurer: boolean): LedgerItem {
   let who: string | null = null;

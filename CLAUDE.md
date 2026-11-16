@@ -106,6 +106,12 @@ Decided (Nov 16):
 
 * Public ledger: the treasurer (members.role = 'treasurer') sees who paid by email; everyone else sees only a shortened account address like "7xKp…3fQa". Filtered on the server (`lib/ledger/`), so emails never reach other browsers.
 * The ledger page refreshes every 5 seconds, and each row has a Verify link to Solana Explorer (devnet).
+* Policy numbers: monthly budgets food $200, travel $300, supplies $150, events $500; daily club-wide auto-approve limit $150 (`lib/policy/rules.ts`, seeded into `category_budgets`).
+* Nothing is auto-rejected. Anything failing a rule shows as "Pending" to the member and goes to the treasurer, who approves or rejects.
+* A small receipt that would push its category over budget → Pending (treasurer decides).
+* Duplicates: same photo OR same store/date/total → Pending (flagged as possible duplicate), with the photos for the treasurer to compare. Demo step 4 shows "flagged as a possible duplicate" rather than "blocked".
+* Members can edit the AI-read amount and category before submitting. Any edit → Pending; the treasurer sees what the AI read next to what the member entered. The AI suggests the category.
+* Treasurer view: pending requests grouped by reason type, each with its receipt photo.
 
 Still open (decide as we go; ask before assuming):
 

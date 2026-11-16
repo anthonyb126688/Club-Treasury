@@ -16,6 +16,12 @@ export function centsToUnits(cents: number): bigint {
   return BigInt(cents) * UNITS_PER_CENT;
 }
 
+/** Whole cents → "$1,234.56". Works for $0.00 too (unlike centsToUnits). */
+export function formatCents(cents: number): string {
+  if (!Number.isSafeInteger(cents)) throw new Error(`Not a whole number of cents: ${cents}`);
+  return formatUsd(BigInt(cents) * UNITS_PER_CENT);
+}
+
 /**
  * Turn a USDC amount in base units into a dollar string like "$1,234.56".
  * Fractions of a cent are dropped (rounded down) so we never show more
