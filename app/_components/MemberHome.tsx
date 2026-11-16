@@ -2,14 +2,16 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useEnsureSolanaAccount } from "@/lib/wallets/useEnsureSolanaAccount";
 import { DuesCard } from "./DuesCard";
+import { ReimbursementHistory } from "./ReimbursementHistory";
 
 type BalanceResponse = {
   email: string | null;
   balance: string | null;
   ready: boolean;
+  isTreasurer?: boolean;
 };
 
 export function MemberHome() {
@@ -73,6 +75,7 @@ export function MemberHome() {
   }, [account, getAccessToken, reloadKey]);
 
   const email = data?.email ?? user?.email?.address ?? "";
+  const reloadBalance = useCallback(() => setReloadKey((k) => k + 1), []);
 
   return (
     <div className="flex w-full flex-col gap-6">
@@ -103,7 +106,25 @@ export function MemberHome() {
       </div>
 
       {!failed && !welcoming && data?.ready && (
-        <DuesCard onPaid={() => setReloadKey((k) => k + 1)} />
+        <>
+          <DuesCard onPaid={reloadBalance} />
+          <Link
+            href="/reimburse"
+            className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-center text-base font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            Get reimbursed
+          </Link>
+          <ReimbursementHistory onChange={reloadBalance} />
+        </>
+      )}
+
+      {data?.isTreasurer && (
+        <Link
+          href="/treasurer"
+          className="w-full rounded-xl border border-zinc-900 px-4 py-3 text-center font-medium dark:border-zinc-50"
+        >
+          Treasurer dashboard
+        </Link>
       )}
 
       <Link
