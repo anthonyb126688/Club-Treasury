@@ -17,7 +17,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 | 3 Restyle every screen | ui-3-pages | DONE |
 | 4 Insights backend | insights-4-api | DONE |
 | 5 Live data | insights-5-live | DONE |
-| 6 Insights page | insights-6-page | not started |
+| 6 Insights page | insights-6-page | DONE |
 | 7 Final check | ui-final | not started |
 
 Priority if usage runs short: 1 → 2 → 3 (what judges see on a phone), then 4 → 5 → 6, then 7.
@@ -102,6 +102,14 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - The public ledger page (`/ledger/[orgId]`, no login) keeps its own 5-second refresh, as decided on Nov 16. The in-app Activity uses `useLiveData` (15s plus the signal). `LedgerView` is split into `ActivityLive`, `PublicLedger` and a shared `LedgerContent`.
   - Animations: ProgressBar widths and the Ring ease over 300ms; new list rows use `fade-in`. Existing rows keep their keys, so they don't re-animate. Reduced motion turns these off (globals.css).
 
+- Phase 6 decisions:
+  - `HBarList` (spending by member) uses `role="figure"` instead of `role="img"`, because its rows are links and "img" would hide them from screen readers and keyboards. It still has an aria-label and a hidden table.
+  - Chart tooltips are a small black bubble over the touched bar or point. Tap toggles it on phones; hover and keyboard focus show it on desktop.
+  - The current month's bar is light gray (unfinished). The dashed budget line is the sum of active categories' monthly budgets.
+  - The donut and legend color only categories that are ahead of pace (orange) or over budget (red); everything else is black and grays.
+  - "Net" above money in/out is green only when positive.
+  - The Home Insights card always shows the semester range.
+
 ## Skipped / reverted
 - (none yet)
 
@@ -131,5 +139,20 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - Uses the hook (10s): the Approvals badge (AppShell) and the Approvals tiles. The request list polls every 10s and follows the signal.
   - Uses the hook (15s): Home balance, the budget ring and Recent activity, and Activity. Club balance and dues (`useDues`) and My requests refresh on the signal.
   - Checked live: firing the signal on Approvals made 3 refetches (badge, tiles, list) with no console errors.
-- NEXT: Phase 6, the Insights page and SVG charts.
+- Phase 6 done:
+  - Charts in `app/_components/charts/` (BarChart, LineChart, Donut, PairedBars, HBarList, plus `common.tsx` and the Ring from Phase 3). No charting library. Each has an aria-label, a hidden data table, a tap/hover tooltip with the exact dollar amount, and an empty state.
+  - Insights page `/c/[orgId]/treasurer/insights`: Month/Semester/Year in the URL (`?range=`), an Export sheet (Activity / Requests / Members CSV for the range), 4 tiles, then spending by month, pace, by category, money in vs out, by member, top vendors. Phones stack in the brief's order; lg+ pairs them up.
+  - Tapping a member opens `/treasurer/members?person=<id>`, and the Members page opens that person's sheet.
+  - Home: the treasurer-only Insights card (semester spending line + the top alert) sits under the balance card.
+  - Checked at 390 and 1440 with real Test Club data. Fixed one sideways-scroll bug: hidden data tables were 360px wide, so each is now wrapped in an `sr-only` div.
+  - Screenshots: `.playwright-mcp/redesign/p6-*.png`.
+
+## >>> RESUME HERE (stopped Nov 17 at the user's request) <<<
+Phases 1–6 are done and tagged (`ui-1-tokens`, `ui-2-shell`, `ui-3-pages`, `insights-4-api`, `insights-5-live`, `insights-6-page`). Lint, all 430 tests and the build are green. Nothing is pushed.
+Only **Phase 7 (final check, tag `ui-final`)** is left:
+1. Run `npm run lint`, `npm test` and `npm run build`.
+2. Playwright screenshots of every club page at 390x844 and 1440x900, as treasurer and as member, into `.playwright-mcp/redesign/`. For member view, intercept `GET /api/me` and set each club's role to "member" (see "Starting point"). Many Phase 3/6 screenshots already exist there.
+3. Live-update check: on Insights, deny a waiting request with a note, if one exists, and watch the numbers update without a reload. The duplicate pizza in Test Club (Blocked tab) can't be denied from Blocked unless it's "queued"; if nothing safe is available, rely on the hook unit tests plus the signal check from Phase 5.
+4. Walk the 7 demo steps at 390px without running scripts. Dues are already paid in Test Club this term, so a fresh club or a second account is needed for step 3.
+5. Finish this file: summary, decisions, skipped items, "what to look at first". Then tag `ui-final`.
 - Phase 3, page 1 (Home) done: glass balance card (club balance big, your balance small, black Get reimbursed, glass Pay dues), budget ring, dues status, My requests in a glass list with a black step bar, Recent activity (latest 5, "See all").

@@ -3,7 +3,7 @@
 import { useSignTransaction } from "@privy-io/react-auth/solana";
 import { ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 import { useOrg } from "../../../../_components/OrgProvider";
@@ -57,7 +57,9 @@ export default function MembersPage() {
   const [busy, setBusy] = useState<{ userId: string; label: string } | null>(null);
   const [confirm, setConfirm] = useState<{ userId: string; action: Action } | null>(null);
   const [notice, setNotice] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null); // phones: the person shown full screen
+  // The person shown in a sheet (phones tap a row; Insights links here with ?person=).
+  const searchParams = useSearchParams();
+  const [openId, setOpenId] = useState<string | null>(() => searchParams.get("person"));
   const closeSheet = useCallback(() => setOpenId(null), []);
 
   const load = useCallback(async () => {

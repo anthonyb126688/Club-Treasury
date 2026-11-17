@@ -13,6 +13,7 @@ import { ReimbursementHistory } from "../../_components/ReimbursementHistory";
 import { Button, ButtonLink } from "../../_components/ui/Button";
 import { GlassCard } from "../../_components/ui/GlassCard";
 import { PageHeader } from "../../_components/ui/PageHeader";
+import { InsightsCard } from "./_components/InsightsCard";
 import { signalDataChanged, useLiveData } from "../../_components/useLiveData";
 
 // A club's home (phone-first): balances with Get reimbursed and Pay dues,
@@ -82,6 +83,9 @@ export default function ClubHome() {
               </p>
             )}
           </GlassCard>
+
+          {/* Treasurers: a quick look at Insights. */}
+          {isTreasurer && <InsightsCard orgId={orgId} />}
 
           {/* How much of the club budget is spent this period. */}
           {ring && (
