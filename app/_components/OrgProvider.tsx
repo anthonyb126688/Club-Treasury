@@ -12,6 +12,7 @@ export type ClubSummary = {
   school: string;
   role: "member" | "treasurer";
   status: "active" | "pending";
+  joinCode?: string; // only for clubs where you're an active treasurer
 };
 
 export type Me = {

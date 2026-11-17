@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { AppHeader } from "../../_components/AppHeader";
 import { OrgProvider, useOrg } from "../../_components/OrgProvider";
+import { useAuthFetch } from "../../_components/useAuthFetch";
 
 // Every page inside a club (/c/[orgId]/...): must be logged in and an active
 // member. The server checks this again on every request; this is just so
@@ -32,7 +33,15 @@ export function ClubShell({ children }: { children: ReactNode }) {
 }
 
 function MembersOnly({ children }: { children: ReactNode }) {
-  const { club, loading } = useOrg();
+  const { club, me, loading } = useOrg();
+  const authFetch = useAuthFetch();
+
+  // Remember this as the club to open next time (best effort).
+  const clubId = club?.id;
+  useEffect(() => {
+    if (!clubId || me?.lastOrgId === clubId) return;
+    authFetch("/api/me", { method: "PATCH", body: JSON.stringify({ lastOrgId: clubId }) }).catch(() => {});
+  }, [clubId, me?.lastOrgId, authFetch]);
   if (loading) return <p className="mx-auto max-w-md px-4 py-12 text-zinc-600 dark:text-zinc-400">Loading…</p>;
   if (!club) {
     return (
