@@ -10,6 +10,7 @@ const CLUB_A = "aaaaaaaa-0000-4000-8000-000000000001";
 const CLUB_B = "bbbbbbbb-0000-4000-8000-000000000002";
 const ALICE = "did:privy:alice"; // active member of Club A only
 const PAT = "did:privy:pat"; // asked to join Club A, not approved yet
+const TRISH = "did:privy:trish"; // treasurer of Club A only
 
 type Filter = { op: string; args: unknown[] };
 type Query = { table: string; filters: Filter[] };
@@ -18,6 +19,7 @@ const queries: Query[] = [];
 const memberships = [
   { org_id: CLUB_A, privy_user_id: ALICE, role: "member", status: "active" },
   { org_id: CLUB_A, privy_user_id: PAT, role: "member", status: "pending" },
+  { org_id: CLUB_A, privy_user_id: TRISH, role: "treasurer", status: "active" },
 ];
 
 function eqValue(q: Query, col: string) {
@@ -37,6 +39,18 @@ function answer(q: Query): { data: unknown; error: null } {
     const org = eqValue(q, "org_id");
     const user = eqValue(q, "privy_user_id");
     return { data: memberships.find((m) => m.org_id === org && m.privy_user_id === user) ?? null, error: null };
+  }
+  if (q.table === "org_settings") {
+    return {
+      data: {
+        dues_amount_cents: 2500,
+        dues_period: "semester",
+        auto_approve_cap_cents: 5000,
+        daily_auto_approve_limit_cents: 15000,
+        max_receipt_age_days: 60,
+      },
+      error: null,
+    };
   }
   return { data: null, error: null };
 }
@@ -62,12 +76,15 @@ function builder(table: string) {
 
 vi.mock("@/lib/db", () => ({ db: () => ({ from: builder }) }));
 vi.mock("@/lib/wallets/privy-server", () => ({
-  verifyAccessToken: async (token: string) => (token === "alice" ? ALICE : token === "pat" ? PAT : null),
+  verifyAccessToken: async (token: string) =>
+    token === "alice" ? ALICE : token === "pat" ? PAT : token === "trish" ? TRISH : null,
 }));
+vi.mock("@/lib/solana/balance", () => ({ getDollarBalance: async () => BigInt(0) }));
 
 const { requireMember, requireTreasurer } = await import("@/lib/orgs/access");
 const { loadLedger } = await import("@/lib/ledger/load");
 const { loadPolicyContext, payOut } = await import("@/lib/reimburse/server");
+const { loadInsights, loadExport } = await import("@/lib/insights/load");
 
 const as = (token?: string) =>
   new Request("http://test/api", token ? { headers: { authorization: `Bearer ${token}` } } : {});
@@ -102,6 +119,11 @@ describe("the club gatekeeper", () => {
 
   it("someone waiting for approval gets nothing yet", async () => {
     expect(await errorOf(await requireMember(as("pat"), CLUB_A))).toEqual({ status: 403, error: "pending" });
+  });
+
+  it("a treasurer of Club A is refused Club B's treasurer pages (Insights, export)", async () => {
+    expect(await requireTreasurer(as("trish"), CLUB_A)).not.toBeInstanceOf(Response);
+    expect(await errorOf(await requireTreasurer(as("trish"), CLUB_B))).toEqual({ status: 403, error: "not_member" });
   });
 
   it("no login → 401; unknown club → 404", async () => {
@@ -139,5 +161,25 @@ describe("lookups always filter by the requested club", () => {
   it("payouts only find requests in the requested club", async () => {
     expect(await payOut(CLUB_B, "11111111-1111-4111-8111-111111111111")).toBe("not_payable");
     expect(filteredBy("reimbursement_requests", CLUB_B)).toBe(true);
+  });
+
+  it("Insights and the CSV export", async () => {
+    const clubB = {
+      id: CLUB_B,
+      name: "Club B",
+      school: "",
+      join_code: "CLUB-0002",
+      squads_multisig_address: null,
+      squads_vault_address: null,
+      squads_spending_limit_address: null,
+      vault_status: "pending" as const,
+      created_at: "2026-11-01T00:00:00Z",
+    };
+    await loadInsights(clubB, "semester");
+    for (const type of ["activity", "requests", "members"] as const) await loadExport(clubB, "year", type);
+    for (const table of ["reimbursement_requests", "ledger_entries", "org_memberships", "dues_payments", "org_settings"]) {
+      expect(queries.some((q) => q.table === table), table).toBe(true);
+      expect(filteredBy(table, CLUB_B), table).toBe(true);
+    }
   });
 });

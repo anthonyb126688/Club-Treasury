@@ -15,7 +15,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 | 1 Design system | ui-1-tokens | DONE |
 | 2 App shell | ui-2-shell | DONE |
 | 3 Restyle every screen | ui-3-pages | DONE |
-| 4 Insights backend | insights-4-api | IN PROGRESS: pure functions + tests done (commit b86e068); next types.ts + routes |
+| 4 Insights backend | insights-4-api | DONE |
 | 5 Live data | insights-5-live | not started |
 | 6 Insights page | insights-6-page | not started |
 | 7 Final check | ui-final | not started |
@@ -94,6 +94,9 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - Spending by member lists every active member (zeros at the bottom) so the dues marker shows for everyone.
   - Runway uses the number of months in the range so far (including the current month) as the divisor.
   - CSV: formula-looking strings get a leading apostrophe; booleans become Yes/No; UTF-8 BOM; CRLF line endings.
+  - CSV dates are Chicago calendar dates (YYYY-MM-DD). The requests export leaves out unsent drafts (status "submitted"). The members export's "Joined" is the approval date (or the request date if missing).
+  - Insights "Spent" = spent statuses decided in the range. "Auto-approved share" = the share of those decided by the policy (`decided_by = 'policy'`).
+  - The club balance in Insights is read the same way as the overview (`getDollarBalance(clubHolderAddress(org))`). If that fails, `balance` is null and the rest still loads.
 
 ## Skipped / reverted
 - (none yet)
@@ -112,5 +115,10 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - Note: `npx tsc` shows stale errors about `.next/types` after a route rename until the next build; this is not a real error.
 - Phase 3 done (one commit per page): Home; Get reimbursed; Budget (member); Activity + public ledger (one shared component, `LedgerView`); Approvals; Members; Budget builder; Settings; Login + onboarding. Nothing scrolls sideways at 390px (checked with scrollWidth). Build green. Tag `ui-3-pages`.
 - Phase 4 so far: `lib/insights/` ranges, spending, pace, cashflow, byMember, vendors, csv, with 7 test files (34 tests, all green).
-- NEXT: `lib/insights/types.ts`, a server loader, `app/api/orgs/[orgId]/treasurer/insights/route.ts` and `.../treasurer/export/route.ts`, plus an isolation test.
+- Phase 4 done:
+  - `lib/insights/types.ts` (the response shape) and `lib/insights/load.ts` (server-only loader: 5 queries + balance, all `.eq("org_id", orgId)`; the `members` lookup is by person id, like the overview).
+  - Routes: `GET app/api/orgs/[orgId]/treasurer/insights` and `.../treasurer/export` (both `requireTreasurer`, already covered by the "treasurer" folder in route-guards).
+  - `tests/org-isolation.test.ts` gained a treasurer of Club A ("trish") who is refused Club B, plus a check that every Insights/export query filters by the requested club.
+  - Checked live against Test Club: 200 with real numbers, CSV download with the right file name, and 404 for an unknown club.
+- NEXT: Phase 5, `useLiveData` hook + "data changed" signal.
 - Phase 3, page 1 (Home) done: glass balance card (club balance big, your balance small, black Get reimbursed, glass Pay dues), budget ring, dues status, My requests in a glass list with a black step bar, Recent activity (latest 5, "See all").
