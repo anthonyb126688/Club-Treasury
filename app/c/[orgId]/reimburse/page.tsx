@@ -1,11 +1,13 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useState } from "react";
+import { outcomeStep, PAYOUT_PROBLEM_REASON, type SubmitOutcome } from "@/lib/member/status";
 import type { Category } from "@/lib/policy/rules";
 import { parseDollarsToCents } from "@/lib/reimburse/decide";
 import { useOrg } from "../../../_components/OrgProvider";
+import { useAuthFetch } from "../../../_components/useAuthFetch";
+import { StepBar } from "../_components/StepBar";
 import { shrinkPhoto } from "./shrink-photo";
 
 type Reading = {
@@ -19,7 +21,7 @@ type Reading = {
   categories: { slug: Category; name: string }[];
 };
 
-type Outcome = "reimbursed" | "paying" | "pending" | "delayed";
+type Outcome = SubmitOutcome;
 
 type Step =
   | { name: "pick" }
@@ -34,8 +36,8 @@ const showDollars = (cents: number) =>
 
 // Get reimbursed: snap a receipt → check what the AI read → done.
 export default function ReimbursePage() {
-  const { ready, authenticated, getAccessToken } = usePrivy();
   const { orgId } = useOrg();
+  const authFetch = useAuthFetch();
   const [step, setStep] = useState<Step>({ name: "pick" });
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<Category>("food");
@@ -49,11 +51,7 @@ export default function ReimbursePage() {
       const photo = await shrinkPhoto(file);
       const form = new FormData();
       form.append("photo", photo, "receipt.jpg");
-      const res = await fetch(`/api/orgs/${orgId}/reimburse/read`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${await getAccessToken()}` },
-        body: form,
-      });
+      const res = await authFetch(`/api/orgs/${orgId}/reimburse/read`, { method: "POST", body: form });
       if (res.status === 429) throw new Error("You've sent a lot of receipts today. Try again tomorrow.");
       if (res.status === 422) throw new Error("We couldn't read that photo. Try a clearer, closer shot.");
       if (!res.ok) throw new Error("Something went wrong reading your receipt. Try again.");
@@ -76,14 +74,15 @@ export default function ReimbursePage() {
     setError(null);
     setStep({ name: "sending", reading });
     try {
-      const res = await fetch(`/api/orgs/${orgId}/reimburse/submit`, {
+      const res = await authFetch(`/api/orgs/${orgId}/reimburse/submit`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${await getAccessToken()}`,
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ id: reading.id, totalCents, category }),
       });
+      if (res.status === 409) {
+        // Already sent (e.g. a double tap): it's in My requests.
+        setStep({ name: "done", outcome: "pending", amount: showDollars(totalCents) });
+        return;
+      }
       if (!res.ok) throw new Error();
       const { status } = (await res.json()) as { status: Outcome };
       setStep({ name: "done", outcome: status, amount: showDollars(totalCents) });
@@ -99,29 +98,23 @@ export default function ReimbursePage() {
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-12">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-semibold tracking-tight">Get reimbursed</h1>
-        <Link href={`/c/${orgId}`} className="text-sm text-zinc-600 underline dark:text-zinc-400">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Get reimbursed</h1>
+        <Link href={`/c/${orgId}`} className="shrink-0 py-1 text-sm text-zinc-600 underline dark:text-zinc-400">
           Home
         </Link>
       </div>
 
-      {!ready ? (
-        <p className="text-zinc-600 dark:text-zinc-400">Loading…</p>
-      ) : !authenticated ? (
-        <p>
-          <Link href="/" className="underline">
-            Log in
-          </Link>{" "}
-          to get reimbursed.
-        </p>
-      ) : step.name === "pick" ? (
+      {step.name === "pick" ? (
         <div className="flex flex-col gap-4">
-          <p className="text-zinc-600 dark:text-zinc-400">
-            Take a clear photo of the whole receipt. We&apos;ll read it for you.
-          </p>
-          <label className="w-full cursor-pointer rounded-xl bg-zinc-900 px-4 py-3 text-center text-base font-medium text-white dark:bg-zinc-50 dark:text-zinc-900">
-            Snap or choose a receipt
+          <ol className="flex flex-col gap-2 text-zinc-600 dark:text-zinc-400">
+            <li>1. Take a clear photo of the whole receipt.</li>
+            <li>2. Check what we read.</li>
+            <li>3. Get paid back, usually in seconds.</li>
+          </ol>
+          <label className="flex w-full cursor-pointer flex-col items-center rounded-2xl bg-zinc-900 px-4 py-6 text-center text-white active:opacity-90 dark:bg-zinc-50 dark:text-zinc-900">
+            <span className="text-xl font-semibold">Snap or choose a receipt</span>
+            <span className="mt-1 text-sm opacity-80">Opens your camera or photos</span>
             <input
               type="file"
               accept="image/*"
@@ -132,7 +125,10 @@ export default function ReimbursePage() {
           </label>
         </div>
       ) : step.name === "reading" ? (
-        <p className="rounded-xl bg-zinc-100 px-4 py-6 text-center text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+        <p
+          role="status"
+          className="animate-pulse rounded-2xl bg-zinc-100 px-4 py-10 text-center text-lg text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        >
           Reading your receipt…
         </p>
       ) : step.name === "confirm" || step.name === "sending" ? (
@@ -167,6 +163,7 @@ export default function ReimbursePage() {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 className="w-full bg-transparent px-2 py-3 text-lg tabular-nums outline-none"
+                aria-label="Amount in dollars"
               />
             </div>
           </label>
@@ -210,24 +207,7 @@ export default function ReimbursePage() {
         </form>
       ) : (
         <div className="flex flex-col gap-4">
-          {step.outcome === "reimbursed" ? (
-            <p className="rounded-xl bg-green-50 px-4 py-6 text-center text-lg font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
-              ✓ You&apos;ve been reimbursed {step.amount}
-            </p>
-          ) : step.outcome === "paying" ? (
-            <p className="rounded-xl bg-green-50 px-4 py-6 text-center text-lg font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
-              Approved! Your {step.amount} is on its way.
-            </p>
-          ) : step.outcome === "pending" ? (
-            <p className="rounded-xl bg-amber-50 px-4 py-6 text-center text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              <span className="block text-lg font-medium">Pending</span>
-              Your {step.amount} request was sent to the treasurer for review.
-            </p>
-          ) : (
-            <p className="rounded-xl bg-amber-50 px-4 py-6 text-center text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              Approved, but your {step.amount} payout is delayed. The treasurer can retry it.
-            </p>
-          )}
+          <Result outcome={step.outcome} amount={step.amount} />
           <Link
             href={`/c/${orgId}`}
             className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-center text-base font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
@@ -250,5 +230,44 @@ export default function ReimbursePage() {
         </p>
       )}
     </main>
+  );
+}
+
+// The result after sending, in the same words as the status line on the
+// home screen (Submitted -> Approved -> Paid, or Blocked).
+function Result({ outcome, amount }: { outcome: Outcome; amount: string }) {
+  const { step } = outcomeStep(outcome);
+  if (step === "blocked") {
+    return (
+      <div className="rounded-2xl bg-red-50 px-4 py-6 text-center text-red-900 dark:bg-red-950 dark:text-red-200">
+        <p className="text-lg font-semibold">Blocked · waiting for the treasurer</p>
+        <p className="mt-1">
+          {PAYOUT_PROBLEM_REASON}. Your {amount} request is saved.
+        </p>
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`flex flex-col gap-4 rounded-2xl px-4 py-6 ${
+        step === "submitted"
+          ? "bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
+          : "bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-200"
+      }`}
+    >
+      <p className="text-center text-lg font-semibold">
+        {step === "paid"
+          ? `✓ You've been reimbursed ${amount}`
+          : step === "approved"
+            ? `Approved! Your ${amount} is on its way.`
+            : `Submitted. Your ${amount} request is waiting for the treasurer.`}
+      </p>
+      <StepBar current={step} />
+      {step === "submitted" && (
+        <p className="text-center text-sm">
+          The treasurer checks requests like this one. Follow it under My requests on the home screen.
+        </p>
+      )}
+    </div>
   );
 }

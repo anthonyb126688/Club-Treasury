@@ -15,10 +15,21 @@ type DuesStatus = {
 const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 
-// Club balance + the one-tap "Pay dues" button.
+// This period's dues status + the one-tap "Pay dues" button. The club's
+// balance comes back with the dues status; it's passed up via onClubBalance.
 // The member's account approves the payment silently (no pop-up); the club
 // pays the network fee. The server makes sure dues are charged once per term.
-export function DuesCard({ orgId, onPaid }: { orgId: string; onPaid: () => void }) {
+export function DuesCard({
+  orgId,
+  onPaid,
+  onClubBalance,
+  refreshKey = 0,
+}: {
+  orgId: string;
+  onPaid: () => void;
+  onClubBalance?: (balance: string | null) => void;
+  refreshKey?: number; // bump to re-check (e.g. after a payout lands)
+}) {
   const { getAccessToken } = usePrivy();
   const account = useMemberAccount();
   const { signTransaction } = useSignTransaction();
@@ -33,13 +44,17 @@ export function DuesCard({ orgId, onPaid }: { orgId: string; onPaid: () => void 
 
   const refresh = useCallback(async () => {
     const res = await fetch(`/api/orgs/${orgId}/dues`, { headers: await authHeader() });
-    if (res.ok) setDues((await res.json()) as DuesStatus);
-  }, [authHeader, orgId]);
+    if (res.ok) {
+      const body = (await res.json()) as DuesStatus;
+      setDues(body);
+      onClubBalance?.(body.clubBalance);
+    }
+  }, [authHeader, orgId, onClubBalance]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
     refresh();
-  }, [refresh]);
+  }, [refresh, refreshKey]);
 
   // While a payment is processing, check back until it settles.
   useEffect(() => {
@@ -94,31 +109,42 @@ export function DuesCard({ orgId, onPaid }: { orgId: string; onPaid: () => void 
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">Club balance</p>
-        <p className="mt-1 text-2xl font-semibold tabular-nums">{dues?.clubBalance ?? "…"}</p>
+    <section className="rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-lg font-semibold">Dues</h2>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">{dues ? `${dues.amount} · ${dues.term}` : "…"}</p>
       </div>
 
-      {dues?.status === "paid" ? (
-        <p className="rounded-xl bg-green-50 px-4 py-3 text-center font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
-          ✓ Dues paid for {dues.term}
+      <div className="mt-4">
+        {dues?.status === "paid" ? (
+          <p className="rounded-xl bg-green-50 px-4 py-3 text-center font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
+            ✓ Paid for {dues.term}
+          </p>
+        ) : dues?.status === "pending" ? (
+          <p className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+            Your dues payment is going through…
+          </p>
+        ) : (
+          <>
+            {dues && (
+              <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">Not paid yet for {dues.term}.</p>
+            )}
+            <button
+              type="button"
+              onClick={payDues}
+              disabled={!dues || busy}
+              className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              {busy ? "Paying…" : dues ? `Pay ${dues.amount} dues` : "Pay dues"}
+            </button>
+          </>
+        )}
+      </div>
+      {message && (
+        <p role="alert" className="mt-3 text-sm text-red-600">
+          {message}
         </p>
-      ) : dues?.status === "pending" ? (
-        <p className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-          Your dues payment is going through…
-        </p>
-      ) : (
-        <button
-          type="button"
-          onClick={payDues}
-          disabled={!dues || busy}
-          className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
-        >
-          {busy ? "Paying…" : dues ? `Pay ${dues.amount} dues for ${dues.term}` : "Pay dues"}
-        </button>
       )}
-      {message && <p role="alert" className="text-sm text-red-600">{message}</p>}
-    </div>
+    </section>
   );
 }
