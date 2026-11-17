@@ -1,11 +1,14 @@
 "use client";
 
+import { Camera, Check } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { outcomeStep, PAYOUT_PROBLEM_REASON, type SubmitOutcome } from "@/lib/member/status";
 import type { Category } from "@/lib/policy/rules";
 import { parseDollarsToCents } from "@/lib/reimburse/decide";
 import { useOrg } from "../../../_components/OrgProvider";
+import { Button, ButtonLink } from "../../../_components/ui/Button";
+import { GlassCard } from "../../../_components/ui/GlassCard";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
 import { headerAction, memberPage, PageHeader } from "../_components/PageHeader";
 import { StepBar } from "../_components/StepBar";
@@ -112,16 +115,13 @@ export default function ReimbursePage() {
 
       {step.name === "pick" ? (
         <div className="flex flex-col gap-4">
-          <label className="flex w-full cursor-pointer flex-col items-center gap-4 rounded-3xl border-2 border-dashed border-brand-300 bg-brand-50 px-6 py-12 text-center hover:border-brand-500 dark:border-brand-700 dark:bg-brand-950/60 dark:hover:border-brand-500">
-            <span aria-hidden className="grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950">
-              <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
-                <path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.2-2h6.6l1.2 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" />
-                <circle cx="12" cy="13" r="3.5" />
-              </svg>
+          <label className="glass flex w-full cursor-pointer flex-col items-center gap-4 rounded-[16px] border-dashed px-6 py-12 text-center hover:bg-white/70">
+            <span aria-hidden className="grid h-16 w-16 place-items-center rounded-[18px] bg-ink text-white">
+              <Camera size={30} strokeWidth={1.75} />
             </span>
             <span>
-              <span className="block font-display text-xl font-semibold">Snap or choose a receipt</span>
-              <span className="mt-1 block text-sm text-zinc-600 dark:text-zinc-400">Opens your camera or photos</span>
+              <span className="block text-[20px] font-bold tracking-[-0.02em]">Snap or choose a receipt</span>
+              <span className="mt-1 block text-[15px] text-muted">Opens your camera or photos</span>
             </span>
             <input
               type="file"
@@ -131,10 +131,10 @@ export default function ReimbursePage() {
               onChange={(e) => onPhoto(e.target.files?.[0])}
             />
           </label>
-          <ol className="grid grid-cols-3 gap-2 text-center text-xs text-zinc-600 dark:text-zinc-400">
+          <ol className="grid grid-cols-3 gap-2 text-center text-[12px] text-muted">
             {["Photo the whole receipt", "Check what we read", "Get paid, usually in seconds"].map((t, i) => (
               <li key={t} className="flex flex-col items-center gap-1.5">
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-zinc-200 font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-black/[0.07] font-semibold text-ink">
                   {i + 1}
                 </span>
                 {t}
@@ -146,110 +146,93 @@ export default function ReimbursePage() {
         <div role="status" className="flex flex-col items-center gap-5 py-8">
           <div
             aria-hidden
-            className="receipt-scan relative w-40 overflow-hidden bg-white px-4 pt-5 pb-7 shadow-[0_18px_40px_-20px_rgb(13_18_16/0.45)] dark:bg-zinc-800"
+            className="receipt-scan relative w-40 overflow-hidden bg-white px-4 pt-5 pb-7 shadow-[0_18px_40px_-20px_rgb(0_0_0/0.35)]"
           >
             {[70, 90, 55, 80, 40, 85].map((w, i) => (
-              <span key={i} className="mb-2.5 block h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-700" style={{ width: `${w}%` }} />
+              <span key={i} className="mb-2.5 block h-1.5 rounded-full bg-zinc-200" style={{ width: `${w}%` }} />
             ))}
-            <span className="mt-4 ml-auto block h-2.5 w-1/2 rounded-full bg-zinc-300 dark:bg-zinc-600" />
+            <span className="mt-4 ml-auto block h-2.5 w-1/2 rounded-full bg-zinc-300" />
           </div>
-          <p className="font-medium">Reading your receipt…</p>
+          <p className="text-[15px] font-semibold">Reading your receipt…</p>
         </div>
       ) : step.name === "confirm" || step.name === "sending" ? (
         <form
-          className="flex flex-col gap-5"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             onSubmit(step.reading);
           }}
         >
           {!step.reading.isReceipt && (
-            <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <p className="rounded-[12px] bg-warn/12 px-4 py-3 text-[13px] text-warn-text">
               This doesn&apos;t look like a receipt. You can still send it, and the treasurer will take a look.
             </p>
           )}
-          <div className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">We read</p>
+          <GlassCard>
+            <p className="text-[13px] font-medium text-muted">We read</p>
             {/* Receipt text is untrusted: shown as plain text only. */}
-            <p className="mt-1 font-medium">{step.reading.summary}</p>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="mt-1 text-[15px] font-medium">{step.reading.summary}</p>
+            <p className="mt-2 text-[13px] text-muted">
               {step.reading.vendor ?? "Unknown store"} · {step.reading.date ?? "no date found"}
             </p>
-          </div>
+          </GlassCard>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Amount</span>
-            <div className="flex items-center rounded-xl border border-zinc-300 bg-white px-4 focus-within:border-brand-500 focus-within:ring-4 focus-within:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-900">
-              <span className="text-zinc-500">$</span>
+          <div className="glass overflow-hidden rounded-[16px]">
+            <label className="flex items-center gap-3 px-4">
+              <span className="w-20 shrink-0 text-[15px] font-medium">Amount</span>
+              <span className="text-[22px] font-semibold text-muted">$</span>
               <input
                 inputMode="decimal"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
-                className="w-full bg-transparent px-2 py-3 font-display text-2xl font-semibold tabular-nums outline-none"
+                className="min-w-0 flex-1 bg-transparent py-3 text-[22px] font-bold tabular-nums outline-none"
                 aria-label="Amount in dollars"
               />
-            </div>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium">Category</span>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as Category)}
-              className="rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-900"
-            >
-              {step.reading.categories.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            </label>
+            <label className="flex items-center gap-3 border-t border-black/[0.06] px-4">
+              <span className="w-20 shrink-0 text-[15px] font-medium">Category</span>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as Category)}
+                className="min-h-12 min-w-0 flex-1 bg-transparent text-[15px] outline-none"
+              >
+                {step.reading.categories.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
 
           {edited && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="px-1 text-[13px] text-muted">
               You changed what we read, so the treasurer will double-check it before you&apos;re paid.
             </p>
           )}
 
-          <button
-            type="submit"
-            disabled={step.name === "sending"}
-            className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
-          >
+          <Button type="submit" disabled={step.name === "sending"} className="w-full">
             {step.name === "sending" ? "Sending…" : "Looks right, send it"}
-          </button>
-          <button
-            type="button"
-            disabled={step.name === "sending"}
-            onClick={() => setStep({ name: "pick" })}
-            className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300"
-          >
+          </Button>
+          <Button variant="plain" disabled={step.name === "sending"} onClick={() => setStep({ name: "pick" })} className="w-full">
             Retake photo
-          </button>
+          </Button>
         </form>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           <Result outcome={step.outcome} amount={step.amount} />
-          <Link
-            href={`/c/${orgId}`}
-            className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-center text-base font-medium text-white dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
-          >
+          <ButtonLink href={`/c/${orgId}`} className="w-full">
             Done
-          </Link>
-          <button
-            type="button"
-            onClick={() => setStep({ name: "pick" })}
-            className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300"
-          >
+          </ButtonLink>
+          <Button variant="plain" onClick={() => setStep({ name: "pick" })} className="w-full">
             Submit another receipt
-          </button>
+          </Button>
         </div>
       )}
 
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="rounded-[12px] bg-alert/10 px-4 py-3 text-[13px] font-medium text-alert">
           {error}
         </p>
       )}
@@ -263,49 +246,41 @@ function Result({ outcome, amount }: { outcome: Outcome; amount: string }) {
   const { step } = outcomeStep(outcome);
   if (step === "blocked") {
     return (
-      <div className="rounded-3xl bg-red-50 px-5 py-6 text-center text-red-900 dark:bg-red-950 dark:text-red-200">
-        <p className="font-display text-lg font-semibold">Blocked · waiting for the treasurer</p>
-        <p className="mt-1">
+      <GlassCard className="text-center">
+        <p className="text-[17px] font-semibold text-alert">Blocked · waiting for the treasurer</p>
+        <p className="mt-1 text-[15px] text-zinc-700">
           {PAYOUT_PROBLEM_REASON}. Your {amount} request is saved.
         </p>
-      </div>
+      </GlassCard>
     );
   }
   if (step === "paid") {
     return (
-      <div className="pop-in flex flex-col items-center gap-3 rounded-3xl bg-brand-700 px-5 py-8 text-center text-white dark:bg-brand-800">
-        <span aria-hidden className="grid h-14 w-14 place-items-center rounded-full bg-gold-400 text-brand-950">
-          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="m5 12.5 4.5 4.5L19 7.5" />
-          </svg>
+      <div className="pop-in flex flex-col items-center gap-3 rounded-[22px] bg-ink px-5 py-8 text-center text-white shadow-[0_20px_40px_-20px_rgb(0_0_0/0.5)]">
+        <span aria-hidden className="grid h-14 w-14 place-items-center rounded-full bg-white text-ink">
+          <Check size={30} strokeWidth={2.5} />
         </span>
-        <p className="text-brand-100">You&apos;ve been reimbursed</p>
-        <p className="font-display text-5xl font-semibold tabular-nums">{amount}</p>
-        <div className="mt-2 w-full rounded-2xl bg-white p-3 text-zinc-900">
-          <StepBar current={step} />
+        <p className="text-[15px] text-white/70">You&apos;ve been reimbursed</p>
+        <p className="text-[48px] leading-none font-bold tracking-[-0.03em] tabular-nums">{amount}</p>
+        <div className="mt-3 w-full">
+          <StepBar current={step} inverted />
         </div>
       </div>
     );
   }
   return (
-    <div
-      className={`flex flex-col gap-4 rounded-3xl px-5 py-6 ${
-        step === "submitted"
-          ? "bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-          : "bg-brand-50 text-brand-900 dark:bg-brand-950 dark:text-brand-100"
-      }`}
-    >
-      <p className="text-center font-display text-lg font-semibold">
+    <GlassCard className="flex flex-col gap-4">
+      <p className="text-center text-[17px] font-semibold">
         {step === "approved"
           ? `Approved! Your ${amount} is on its way.`
           : `Submitted. Your ${amount} request is waiting for the treasurer.`}
       </p>
       <StepBar current={step} />
       {step === "submitted" && (
-        <p className="text-center text-sm">
+        <p className="text-center text-[13px] text-muted">
           The treasurer checks requests like this one. Follow it under My requests on the home screen.
         </p>
       )}
-    </div>
+    </GlassCard>
   );
 }
