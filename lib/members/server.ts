@@ -25,7 +25,7 @@ export async function loadMemberList(
   const settings = await loadOrgSettings(orgId);
   const period = currentPeriod(settings.duesPeriod);
 
-  const [memberships, dues, paid] = await Promise.all([
+  const [memberships, dues, paid, founderId] = await Promise.all([
     db()
       .from("org_memberships")
       .select("privy_user_id, role, status, requested_at, member:members!org_memberships_privy_user_id_fkey(email, first_name, last_name)")
@@ -42,6 +42,7 @@ export async function loadMemberList(
       .select("privy_user_id, total_cents")
       .eq("org_id", orgId)
       .eq("status", "paid"),
+    loadFounderId(orgId),
   ]);
   if (memberships.error) throw new Error(`members lookup: ${memberships.error.message}`);
   if (dues.error) throw new Error(`dues lookup: ${dues.error.message}`);
@@ -50,7 +51,14 @@ export async function loadMemberList(
   const paidIds = new Set((dues.data ?? []).map((r) => r.privy_user_id as string));
   const totals = totalsByPerson((paid.data ?? []) as { privy_user_id: string; total_cents: number | null }[]);
   const rows = (memberships.data ?? []) as unknown as MembershipRow[];
-  return { people: buildMemberList(rows, paidIds, totals, viewerId), period };
+  return { people: buildMemberList(rows, paidIds, totals, viewerId, founderId), period };
+}
+
+/** Who created this club (protected from being demoted by co-treasurers). */
+async function loadFounderId(orgId: string): Promise<string | null> {
+  const { data, error } = await db().from("orgs").select("created_by").eq("id", orgId).maybeSingle();
+  if (error) throw new Error(`founder lookup: ${error.message}`);
+  return (data?.created_by as string | null) ?? null;
 }
 
 export type Target = { membership: TargetMembership; solanaAddress: string | null };
@@ -79,11 +87,16 @@ export async function checkTarget(
   targetId: string,
   action: MemberAction,
 ): Promise<{ target: Target; check: ActionCheck }> {
-  const [target, treasurerIds] = await Promise.all([loadTarget(orgId, targetId), activeTreasurers(orgId)]);
+  const [target, treasurerIds, founderId] = await Promise.all([
+    loadTarget(orgId, targetId),
+    activeTreasurers(orgId),
+    loadFounderId(orgId),
+  ]);
   const check = checkMemberAction(action, target.membership, {
     viewerId,
     targetId,
     activeTreasurerIds: treasurerIds,
+    founderId,
   });
   return { target, check };
 }

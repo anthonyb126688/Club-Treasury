@@ -18,6 +18,7 @@ type Person = {
   duesPaidThisPeriod: boolean;
   totalReimbursed: string;
   isYou: boolean;
+  isFounder: boolean;
 };
 
 type MembersData = { joinCode: string; period: { id: string; label: string }; people: Person[] };
@@ -328,7 +329,7 @@ function MemberRow({
                 : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
             }`}
           >
-            {treasurer ? "Treasurer" : "Member"}
+            {p.isFounder && treasurer ? "Founder" : treasurer ? "Treasurer" : "Member"}
           </span>
         </p>
         <p className={p.duesPaidThisPeriod ? "text-green-700 dark:text-green-400" : "text-zinc-600 dark:text-zinc-400"}>
@@ -346,7 +347,9 @@ function MemberRow({
           <span className="py-2 text-sm text-zinc-600 dark:text-zinc-400">{busyLabel}</span>
         ) : treasurer ? (
           <>
-            {onlyTreasurer ? (
+            {p.isFounder && !p.isYou ? (
+              <span className="py-1 text-xs text-zinc-500">Founded the club. Only they can step down.</span>
+            ) : onlyTreasurer ? (
               <span className="py-1 text-xs text-zinc-500">
                 The only treasurer. Make someone else co-treasurer before stepping down.
               </span>

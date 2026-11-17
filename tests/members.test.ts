@@ -86,6 +86,22 @@ describe("checkMemberAction", () => {
     expect(checkMemberAction("remove", { role: "member", status: "active" }, ctx(ME))).toMatchObject({ ok: false, error: "remove_self" });
   });
 
+  it("doesn't let a co-treasurer demote or remove the club's founder", () => {
+    // ME founded the club; CO is a co-treasurer looking at ME.
+    const asCo = { viewerId: CO, targetId: ME, activeTreasurerIds: [ME, CO], founderId: ME };
+    expect(checkMemberAction("demote", treasurer, asCo)).toMatchObject({ ok: false, error: "founder" });
+    expect(checkMemberAction("demote_remove", treasurer, asCo)).toMatchObject({ ok: false, error: "founder" });
+    // Even if the founder stepped down earlier, a co-treasurer can't remove them.
+    expect(checkMemberAction("remove", member, asCo)).toMatchObject({ ok: false, error: "founder" });
+  });
+
+  it("still lets the founder step down, and manage co-treasurers", () => {
+    const founder = { activeTreasurerIds: [ME, CO], founderId: ME };
+    expect(checkMemberAction("demote", treasurer, { ...founder, viewerId: ME, targetId: ME }).ok).toBe(true);
+    expect(checkMemberAction("demote", treasurer, { ...founder, viewerId: ME, targetId: CO }).ok).toBe(true);
+    expect(checkMemberAction("demote_remove", treasurer, { ...founder, viewerId: ME, targetId: CO }).ok).toBe(true);
+  });
+
   it("explains every refusal in plain English", () => {
     const r = checkMemberAction("demote", treasurer, ctx(ME, [ME]));
     expect(r.ok).toBe(false);

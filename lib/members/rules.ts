@@ -42,7 +42,8 @@ export type MemberActionError =
   | "is_treasurer"
   | "not_treasurer"
   | "remove_self"
-  | "last_treasurer";
+  | "last_treasurer"
+  | "founder";
 
 export const MEMBER_ACTION_MESSAGES: Record<MemberActionError, string> = {
   not_found: "That person isn't in this club.",
@@ -53,6 +54,7 @@ export const MEMBER_ACTION_MESSAGES: Record<MemberActionError, string> = {
   not_treasurer: "That person isn't a treasurer.",
   remove_self: "You can't remove yourself here. Use Leave club instead.",
   last_treasurer: "A club needs at least one treasurer. Make someone else co-treasurer first.",
+  founder: "Only the club's founder can change their own role.",
 };
 
 export type ActionCheck = { ok: true } | { ok: false; error: MemberActionError; message: string };
@@ -62,11 +64,13 @@ const fail = (error: MemberActionError): ActionCheck => ({ ok: false, error, mes
 /**
  * May the treasurer `viewerId` do `action` to `targetId`, whose membership in
  * THIS club is `target`? `activeTreasurerIds` = the club's active treasurers.
+ * `founderId` = who created the club: co-treasurers can't demote or remove
+ * them; only the founder can step down.
  */
 export function checkMemberAction(
   action: MemberAction,
   target: TargetMembership,
-  ctx: { viewerId: string; targetId: string; activeTreasurerIds: readonly string[] },
+  ctx: { viewerId: string; targetId: string; activeTreasurerIds: readonly string[]; founderId?: string | null },
 ): ActionCheck {
   if (!target || target.status === "removed" || target.status === "declined") return fail("not_found");
 
@@ -76,6 +80,8 @@ export function checkMemberAction(
 
   if (target.status !== "active") return fail("not_active");
   const self = ctx.viewerId === ctx.targetId;
+  const isFounder = !!ctx.founderId && ctx.targetId === ctx.founderId;
+  if (isFounder && !self && action !== "promote") return fail("founder");
 
   if (action === "remove") {
     if (self) return fail("remove_self");
@@ -113,6 +119,8 @@ export type MemberListItem = {
   duesPaidThisPeriod: boolean;
   totalReimbursedCents: number;
   isYou: boolean;
+  /** Created the club. Other treasurers can't demote or remove them. */
+  isFounder: boolean;
 };
 
 /** "Ada Lovelace", or the email, or "A member" (same as lib/orgs displayName). */
@@ -138,6 +146,7 @@ export function buildMemberList(
   paidDuesIds: ReadonlySet<string>,
   reimbursedCents: ReadonlyMap<string, number>,
   viewerId: string,
+  founderId: string | null = null,
 ): MemberListItem[] {
   const items: MemberListItem[] = memberships
     .filter((m): m is MembershipRow & { status: "pending" | "active" } => m.status === "pending" || m.status === "active")
@@ -151,6 +160,7 @@ export function buildMemberList(
       duesPaidThisPeriod: m.status === "active" && paidDuesIds.has(m.privy_user_id),
       totalReimbursedCents: reimbursedCents.get(m.privy_user_id) ?? 0,
       isYou: m.privy_user_id === viewerId,
+      isFounder: !!founderId && m.privy_user_id === founderId,
     }));
 
   const rank = (i: MemberListItem) => (i.status === "pending" ? 0 : i.role === "treasurer" ? 1 : 2);
