@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { formatCents } from "@/lib/money";
 import { requireTreasurer } from "@/lib/orgs/access";
+import { settleVaultChanges } from "@/lib/orgs/vault";
 import { loadMemberList } from "@/lib/members/server";
 
 // GET /api/orgs/:orgId/members: everyone waiting to join THIS club (first),
@@ -12,6 +13,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/orgs/[orgId]
   const access = await requireTreasurer(request, orgId);
   if (access instanceof Response) return access;
   try {
+    // Finish any co-treasurer change whose confirmation was slow, so roles are current.
+    await settleVaultChanges(orgId).catch((e) => console.error("settle vault changes:", (e as Error).message));
     const { people, period } = await loadMemberList(access.org.id, access.person.userId);
     return Response.json({
       joinCode: access.org.join_code,
