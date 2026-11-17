@@ -28,10 +28,11 @@ const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCode
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 
 const inputClass =
-  "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-brand-400";
+  "min-h-11 rounded-[12px] border-[0.5px] border-black/10 bg-white/80 px-3 text-[15px] outline-none focus:border-ink focus:ring-2 focus:ring-black/10";
 const primaryButton =
-  "rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-2 font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950";
-const secondaryButton = "rounded-xl border border-zinc-300 px-4 py-2 font-medium disabled:opacity-50 dark:border-zinc-700";
+  "inline-flex min-h-11 items-center justify-center rounded-[12px] bg-ink px-4 text-[15px] font-semibold text-white hover:bg-zinc-800 disabled:opacity-40";
+const secondaryButton =
+  "glass inline-flex min-h-11 items-center justify-center rounded-[12px] px-4 text-[15px] font-semibold text-ink hover:bg-white/80 disabled:opacity-40";
 
 const noSubscribe = () => () => {};
 
@@ -91,7 +92,7 @@ export default function SettingsPage() {
       {!isTreasurer || problem === "forbidden" ? (
         <p>This page is for the club treasurer.</p>
       ) : !loaded ? (
-        <p className="text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted">
           {problem === "failed" ? "We couldn't load the settings. Refresh to try again." : "Loading…"}
         </p>
       ) : (
@@ -254,23 +255,23 @@ function SettingsForm({
 
   return (
     <>
-      <section className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-900" aria-live="polite">
-        <h2 className="text-sm font-medium text-zinc-600 dark:text-zinc-400">What this means</h2>
+      <section className="glass rounded-[16px] p-4 sm:p-5" aria-live="polite">
+        <h2 className="text-[13px] font-medium text-muted">What this means</h2>
         <ul className="mt-2 flex flex-col gap-1">
           {preview.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-[13px] text-muted">
           Anything else, and every &quot;Other&quot; receipt, goes to you to approve.{" "}
-          <Link href={`/c/${orgId}/treasurer/budget`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
+          <Link href={`/c/${orgId}/treasurer/budget`} className="font-semibold text-ink underline underline-offset-4">
             Category budgets
           </Link>
         </p>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Dues and instant payouts</h2>
+      <section className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:p-5">
+        <h2 className="text-[17px] font-semibold">Dues and instant payouts</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Dues amount ($)" error={fieldErrors.dues}>
             <input className={inputClass} inputMode="decimal" value={fields.dues} onChange={(e) => set.setDues(e.target.value)} />
@@ -306,16 +307,16 @@ function SettingsForm({
             {saving ? "Saving…" : "Save changes"}
           </button>
           {saveMsg && (
-            <p role="status" className={`text-sm ${saveMsg.ok ? "text-brand-700 dark:text-brand-300" : "text-red-600 dark:text-red-400"}`}>
+            <p role="status" className={`text-sm ${saveMsg.ok ? "text-ink" : "text-alert"}`}>
               {saveMsg.text}
             </p>
           )}
         </div>
       </section>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold">Daily safety limit</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+      <section className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:p-5">
+        <h2 className="text-[17px] font-semibold">Daily safety limit</h2>
+        <p className="text-[13px] text-muted">
           The most the club pays out automatically in one day. This limit is locked into the club&apos;s vault on
           the blockchain: even if our server were hacked, it couldn&apos;t pay out more than this a day. Changing it
           takes one tap; your account approves it in the background.
@@ -342,12 +343,12 @@ function SettingsForm({
           </button>
         </div>
         {!loaded.vaultReady && (
-          <p className="text-sm text-amber-700 dark:text-amber-300">
+          <p className="text-[13px] text-warn-text">
             The club&apos;s vault is still being set up. You can change the daily limit once it&apos;s ready.
           </p>
         )}
         {dailyMsg && (
-          <p role="status" className={`text-sm ${dailyMsg.ok ? "text-brand-700 dark:text-brand-300" : "text-red-600 dark:text-red-400"}`}>
+          <p role="status" className={`text-sm ${dailyMsg.ok ? "text-ink" : "text-alert"}`}>
             {dailyMsg.text}
           </p>
         )}
@@ -360,13 +361,13 @@ function SettingsForm({
 
 function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string | null; children: ReactNode }) {
   return (
-    <label className="flex flex-col gap-1 text-sm">
+    <label className="flex flex-col gap-1 text-[13px] font-medium">
       <span className="font-medium">{label}</span>
       {children}
       {error ? (
-        <span className="text-red-600 dark:text-red-400">{error}</span>
+        <span className="text-alert">{error}</span>
       ) : (
-        hint && <span className="text-zinc-600 dark:text-zinc-400">{hint}</span>
+        hint && <span className="text-muted">{hint}</span>
       )}
     </label>
   );
@@ -442,12 +443,12 @@ function JoinCodeSection({
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">Invite members</h2>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
+    <section className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:p-5">
+      <h2 className="text-[17px] font-semibold">Invite members</h2>
+      <p className="text-[13px] text-muted">
         Share the code or link. New members show up for you to approve.
       </p>
-      <div className="flex flex-col gap-4 rounded-2xl bg-zinc-100 p-4 sm:flex-row sm:items-center dark:bg-zinc-900">
+      <div className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:flex-row sm:items-center sm:p-5">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-3xl font-semibold tracking-wider">{joinCode}</span>
@@ -457,7 +458,7 @@ function JoinCodeSection({
           </div>
           {link && (
             <div className="flex flex-wrap items-center gap-3">
-              <span className="min-w-0 break-all text-sm text-zinc-700 dark:text-zinc-300">{link}</span>
+              <span className="min-w-0 break-all text-[13px] text-zinc-700">{link}</span>
               <button type="button" className={secondaryButton} onClick={() => copy("link", link)}>
                 {copied === "link" ? "Copied" : "Copy link"}
               </button>
@@ -468,7 +469,7 @@ function JoinCodeSection({
               type="button"
               className={
                 confirm
-                  ? "self-start rounded-xl bg-red-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+                  ? "self-start inline-flex min-h-11 items-center justify-center rounded-[12px] bg-alert px-4 text-[15px] font-semibold text-white disabled:opacity-40"
                   : `self-start ${secondaryButton}`
               }
               disabled={busy}
@@ -477,7 +478,7 @@ function JoinCodeSection({
               {busy ? "Making a new code…" : confirm ? "Tap again to replace the code" : "Make a new code"}
             </button>
             {confirm && (
-              <span className="text-sm text-amber-700 dark:text-amber-300">
+              <span className="text-[13px] text-warn-text">
                 The current code and invite link will stop working.
               </span>
             )}
@@ -485,11 +486,11 @@ function JoinCodeSection({
         </div>
         {qr && (
           // eslint-disable-next-line @next/next/no-img-element -- a data: URL, nothing to optimize
-          <img src={qr} alt="QR code for the invite link" width={160} height={160} className="self-center rounded-xl bg-white p-2" />
+          <img src={qr} alt="QR code for the invite link" width={160} height={160} className="self-center rounded-[12px] bg-white p-2" />
         )}
       </div>
       {msg && (
-        <p role="status" className={`text-sm ${msg.ok ? "text-brand-700 dark:text-brand-300" : "text-red-600 dark:text-red-400"}`}>
+        <p role="status" className={`text-sm ${msg.ok ? "text-ink" : "text-alert"}`}>
           {msg.text}
         </p>
       )}
