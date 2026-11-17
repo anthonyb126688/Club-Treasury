@@ -1,77 +1,45 @@
 "use client";
 
-import { usePrivy } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import type { Me } from "./OrgProvider";
-import { useAccountSetup } from "./useAccountSetup";
-import { useAuthFetch } from "./useAuthFetch";
+import { useEffect } from "react";
+import { homeDestination } from "@/lib/orgs/onboarding";
+import { NameForm } from "./onboarding/NameForm";
+import { useMe } from "./onboarding/useMe";
 
 /**
- * Where a logged-in person goes: their last club (or their first active
- * one). People with no club yet see the "create or join" start (Phase 2
- * builds the full onboarding; this is the hand-off point).
+ * Where a logged-in person goes (lib/orgs/onboarding.ts homeDestination):
+ * no name yet → "What's your name?" right here; in a club → their last
+ * club (or first active one); only asked to join → the waiting screen;
+ * otherwise → create or join a club.
  */
 export function HomeRouter() {
   const router = useRouter();
-  const { logout } = usePrivy();
-  const authFetch = useAuthFetch();
-  const setup = useAccountSetup();
-  const [me, setMe] = useState<Me | null>(null);
-  const [failed, setFailed] = useState(false);
+  const { state, me, refresh } = useMe();
+  const destination = me ? homeDestination(me) : null;
+
+  // A plain string, so the effect only re-runs when the place changes.
+  const path =
+    !destination || destination.to === "name"
+      ? null
+      : destination.to === "club"
+        ? `/c/${destination.orgId}`
+        : destination.to === "waiting"
+          ? `/waiting/${destination.orgId}`
+          : "/start";
 
   useEffect(() => {
-    if (setup !== "ready") return;
-    let cancelled = false;
-    (async () => {
-      for (let i = 0; i < 10 && !cancelled; i++) {
-        const res = await authFetch("/api/me");
-        if (res.ok) {
-          const body = (await res.json()) as Me;
-          if (cancelled) return;
-          setMe(body);
-          const active = body.clubs.filter((c) => c.status === "active");
-          const target = active.find((c) => c.id === body.lastOrgId) ?? active[0];
-          if (target) router.replace(`/c/${target.id}`);
-          return;
-        }
-        if (res.status !== 404) break; // 404 = account still being set up
-        await new Promise((r) => setTimeout(r, 2000));
-      }
-      if (!cancelled) setFailed(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setup, authFetch, router]);
+    if (path) router.replace(path);
+  }, [path, router]);
 
-  if (setup === "failed" || failed) {
+  if (state === "failed") {
     return (
       <p role="alert" className="text-sm text-red-600">
         We couldn&apos;t finish setting up your account. Refresh to try again.
       </p>
     );
   }
-
-  const waiting = me?.clubs.find((c) => c.status === "pending");
-  if (me && !me.clubs.some((c) => c.status === "active")) {
-    return (
-      <div className="flex flex-col gap-4">
-        {waiting ? (
-          <p className="rounded-xl bg-zinc-100 px-4 py-6 text-center dark:bg-zinc-900">
-            Waiting for the treasurer of <strong>{waiting.name}</strong> to approve you.
-          </p>
-        ) : (
-          <p className="rounded-xl bg-zinc-100 px-4 py-6 text-center dark:bg-zinc-900">
-            You&apos;re not in a club yet.
-          </p>
-        )}
-        <button type="button" onClick={logout} className="self-start text-sm text-zinc-600 underline dark:text-zinc-400">
-          Log out
-        </button>
-      </div>
-    );
-  }
-
-  return <p className="text-zinc-600 dark:text-zinc-400">Setting up your account…</p>;
+  if (destination?.to === "name") return <NameForm onSaved={refresh} />;
+  return (
+    <p className="text-zinc-600 dark:text-zinc-400">{state === "loading" ? "Setting up your account…" : "Loading…"}</p>
+  );
 }
