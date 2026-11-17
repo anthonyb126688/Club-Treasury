@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { isInProgress, type StatusLine } from "@/lib/member/status";
 import { StepBar } from "../c/[orgId]/_components/StepBar";
+import { EmptyState, ErrorState, LoadingBlocks } from "./ui/EmptyState";
+import { SectionLabel } from "./ui/GlassCard";
 import { useAuthFetch } from "./useAuthFetch";
 
 type Item = {
@@ -68,28 +70,30 @@ export function ReimbursementHistory({ orgId, onChange }: { orgId: string; onCha
   }, [authFetch, onChange, orgId]);
 
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold">My requests</h2>
+    <section className="flex flex-col gap-2">
+      <SectionLabel>My requests</SectionLabel>
       {items === null ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {failed ? "We couldn't load your requests. We'll try again shortly." : "Loading your requests…"}
-        </p>
+        failed ? (
+          <ErrorState what="We couldn't load your requests." todo="We'll try again in a few seconds." />
+        ) : (
+          <LoadingBlocks rows={2} height="h-24" label="Loading your requests" />
+        )
       ) : items.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
-          No requests yet. Tap <span className="font-medium text-zinc-900 dark:text-zinc-100">Get reimbursed</span> after
-          you buy something for the club.
-        </p>
+        <EmptyState title="No requests yet">
+          Bought something for the club? Tap <span className="font-semibold text-ink">Get reimbursed</span> and snap
+          the receipt.
+        </EmptyState>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="glass divide-y divide-black/[0.06] overflow-hidden rounded-[16px]">
           {items.map((r) => (
-            <li key={r.id} className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <li key={r.id} className="fade-in px-4 py-3.5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   {/* Receipt text is untrusted: plain text only. */}
-                  <p className="truncate font-medium">{r.vendor ?? "Receipt"}</p>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{showDate(r)}</p>
+                  <p className="truncate text-[15px] font-medium">{r.vendor ?? "Receipt"}</p>
+                  <p className="text-[13px] text-muted">{showDate(r)}</p>
                 </div>
-                <p className="shrink-0 font-display text-lg font-semibold tabular-nums">{r.amount ?? "—"}</p>
+                <p className="shrink-0 text-[17px] font-semibold tabular-nums">{r.amount ?? "—"}</p>
               </div>
               {r.line && <RequestStatus line={r.line} />}
             </li>
@@ -97,7 +101,7 @@ export function ReimbursementHistory({ orgId, onChange }: { orgId: string; onCha
         </ul>
       )}
       {failed && items !== null && (
-        <p className="text-xs text-zinc-500">Couldn&apos;t refresh just now. Showing the last update.</p>
+        <p className="px-1 text-[12px] text-muted">Couldn&apos;t refresh just now. Showing the last update.</p>
       )}
     </section>
   );
@@ -106,9 +110,9 @@ export function ReimbursementHistory({ orgId, onChange }: { orgId: string; onCha
 function RequestStatus({ line }: { line: StatusLine }) {
   if (line.kind === "denied") {
     return (
-      <div className="mt-3 rounded-xl bg-zinc-100 px-3 py-2 text-sm dark:bg-zinc-800">
-        <p className="font-medium text-zinc-900 dark:text-zinc-100">Denied</p>
-        <p className="text-zinc-600 dark:text-zinc-400">
+      <div className="mt-3 rounded-[12px] bg-black/[0.05] px-3 py-2 text-[13px]">
+        <p className="font-semibold">Denied</p>
+        <p className="text-zinc-600">
           {line.note ? `Treasurer's note: ${line.note}` : "The treasurer didn't approve this one."}
         </p>
       </div>
@@ -116,10 +120,10 @@ function RequestStatus({ line }: { line: StatusLine }) {
   }
   if (line.kind === "blocked") {
     return (
-      <div className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm dark:bg-red-950">
-        <p className="font-medium text-red-800 dark:text-red-200">Blocked · waiting for the treasurer</p>
+      <div className="mt-3 rounded-[12px] bg-alert/10 px-3 py-2 text-[13px]">
+        <p className="font-semibold text-alert">Blocked · waiting for the treasurer</p>
         {line.reasons.map((reason) => (
-          <p key={reason} className="text-red-700 dark:text-red-300">
+          <p key={reason} className="text-zinc-700">
             {reason}
           </p>
         ))}
@@ -131,15 +135,15 @@ function RequestStatus({ line }: { line: StatusLine }) {
     <div className="mt-3">
       <StepBar current={line.current} />
       {line.current === "submitted" && line.waiting && (
-        <div className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-          <p className="font-medium">Waiting for the treasurer</p>
+        <div className="mt-2 rounded-[12px] bg-black/[0.05] px-3 py-2 text-[13px] text-zinc-700">
+          <p className="font-semibold text-ink">Waiting for the treasurer</p>
           {line.reasons.map((reason) => (
             <p key={reason}>{reason}</p>
           ))}
         </div>
       )}
       {line.current === "approved" && (
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Approved. Your money is on its way…</p>
+        <p className="mt-2 text-[13px] text-muted">Approved. Your money is on its way…</p>
       )}
     </div>
   );

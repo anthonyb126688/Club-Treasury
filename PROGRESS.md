@@ -14,7 +14,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 |---|---|---|
 | 1 Design system | ui-1-tokens | DONE |
 | 2 App shell | ui-2-shell | DONE |
-| 3 Restyle every screen | ui-3-pages | not started |
+| 3 Restyle every screen | ui-3-pages | IN PROGRESS: Home done; next Get reimbursed |
 | 4 Insights backend | insights-4-api | not started |
 | 5 Live data | insights-5-live | not started |
 | 6 Insights page | insights-6-page | not started |
@@ -70,6 +70,11 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - The Approvals badge still polls every 60s; Phase 5 makes it live.
   - The More sheet uses the shared `Sheet` (always a bottom sheet).
   - The phone tab bar is a floating glass pill, 12px from the sides, above the home bar.
+- Phase 3 Home:
+  - The "spent this period" ring adds up every budgeted category's current-period spent and budget from the member budget API (`lib/member/ring.ts`, tested). Months and semesters are mixed, so the label just says "this period".
+  - The old `DuesCard` component became a `useDues` hook (same payment steps, unchanged), so "Pay dues" can sit in the balance card. The dues status is its own small card.
+  - Recent activity reads `/api/ledger/[orgId]` (the same data as Activity); the row component `ActivityRow` lives in `app/_components/RecentActivity.tsx` and is shared with Activity.
+  - On phones under 420px, the Get reimbursed button hides its icon so the text fits on one line.
 
 ## Skipped / reverted
 - (none yet)
@@ -86,3 +91,4 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - New `/c/[orgId]/activity` and a placeholder `/c/[orgId]/treasurer/insights`.
   - lint, tests and build are green. Screenshots: `.playwright-mcp/redesign/p2-*.png`.
   - Note: `npx tsc` shows stale errors about `.next/types` after a route rename until the next build; this is not a real error.
+- Phase 3, page 1 (Home) done: glass balance card (club balance big, your balance small, black Get reimbursed, glass Pay dues), budget ring, dues status, My requests in a glass list with a black step bar, Recent activity (latest 5, "See all").

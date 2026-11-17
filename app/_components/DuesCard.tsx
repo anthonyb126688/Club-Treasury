@@ -5,7 +5,7 @@ import { useSignTransaction } from "@privy-io/react-auth/solana";
 import { useCallback, useEffect, useState } from "react";
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 
-type DuesStatus = {
+export type DuesStatus = {
   term: string;
   amount: string;
   status: "unpaid" | "pending" | "paid";
@@ -15,11 +15,11 @@ type DuesStatus = {
 const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 
-// This period's dues status + the one-tap "Pay dues" button. The club's
+// This period's dues status + the one-tap "Pay dues" action. The club's
 // balance comes back with the dues status; it's passed up via onClubBalance.
 // The member's account approves the payment silently (no pop-up); the club
 // pays the network fee. The server makes sure dues are charged once per term.
-export function DuesCard({
+export function useDues({
   orgId,
   onPaid,
   onClubBalance,
@@ -108,43 +108,5 @@ export function DuesCard({
     }
   }
 
-  return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Dues</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{dues ? `${dues.amount} · ${dues.term}` : "…"}</p>
-      </div>
-
-      <div className="mt-4">
-        {dues?.status === "paid" ? (
-          <p className="rounded-xl bg-brand-50 px-4 py-3 text-center font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-200">
-            ✓ Paid for {dues.term}
-          </p>
-        ) : dues?.status === "pending" ? (
-          <p className="animate-pulse rounded-xl bg-zinc-100 px-4 py-3 text-center text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-            Your dues payment is going through…
-          </p>
-        ) : (
-          <>
-            {dues && (
-              <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">Not paid yet for {dues.term}.</p>
-            )}
-            <button
-              type="button"
-              onClick={payDues}
-              disabled={!dues || busy}
-              className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
-            >
-              {busy ? "Paying…" : dues ? `Pay ${dues.amount} dues` : "Pay dues"}
-            </button>
-          </>
-        )}
-      </div>
-      {message && (
-        <p role="alert" className="mt-3 text-sm text-red-600">
-          {message}
-        </p>
-      )}
-    </section>
-  );
+  return { dues, busy, message, payDues };
 }

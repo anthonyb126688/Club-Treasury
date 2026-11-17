@@ -1,33 +1,28 @@
 import { STEP_LABELS, STEPS, type Step } from "@/lib/member/status";
 
-// Submitted → Approved → Paid, with the current step highlighted.
+// Submitted → Approved → Paid, with the current step highlighted in black.
 // Used on the home screen ("My requests") and the reimburse result.
-export function StepBar({ current }: { current: Step }) {
+export function StepBar({ current, inverted = false }: { current: Step; inverted?: boolean }) {
   const currentIndex = STEPS.indexOf(current);
-  const done = current === "paid";
   return (
     <ol className="flex items-center gap-1" aria-label={`Status: ${STEP_LABELS[current]}`}>
       {STEPS.map((step, i) => {
         const reached = i <= currentIndex;
         const isCurrent = i === currentIndex;
         return (
-          <li key={step} className="flex flex-1 flex-col gap-1" aria-current={isCurrent ? "step" : undefined}>
+          <li key={step} className="flex flex-1 flex-col gap-1.5" aria-current={isCurrent ? "step" : undefined}>
             <span
-              className={`h-1.5 rounded-full ${
-                reached
-                  ? done
-                    ? "bg-brand-600 dark:bg-brand-400"
-                    : "bg-brand-600 dark:bg-brand-400"
-                  : "bg-zinc-200 dark:bg-zinc-800"
+              className={`h-1 rounded-full transition-colors duration-300 ${
+                reached ? (inverted ? "bg-white" : "bg-ink") : inverted ? "bg-white/25" : "bg-black/[0.1]"
               }`}
             />
             <span
-              className={`text-xs ${
+              className={`text-[12px] ${
                 isCurrent
-                  ? done
-                    ? "font-semibold text-brand-700 dark:text-brand-300"
-                    : "font-semibold text-zinc-900 dark:text-zinc-100"
-                  : "text-zinc-500"
+                  ? `font-semibold ${inverted ? "text-white" : "text-ink"}`
+                  : inverted
+                    ? "text-white/60"
+                    : "text-muted"
               }`}
             >
               {STEP_LABELS[step]}
