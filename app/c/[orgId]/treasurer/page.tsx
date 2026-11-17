@@ -8,14 +8,15 @@ import { useAuthFetch } from "../../../_components/useAuthFetch";
 import { useOrg } from "../../../_components/OrgProvider";
 import { useShell } from "../_components/AppShell";
 import { PageHeader, treasurerPage } from "../_components/PageHeader";
+import { ErrorState, LoadingBlocks } from "../../../_components/ui/EmptyState";
 import { OverviewCards } from "./_components/OverviewCards";
 import { RequestPanel } from "./_components/RequestPanel";
 import { RequestTabs } from "./_components/RequestTabs";
 import { useTreasurerActions, type Target } from "./_components/useTreasurerActions";
 
 // Approvals (the treasurer dashboard): club numbers at the top, then requests by tab.
-// Tapping a request opens its details (side panel on wide screens, full
-// screen on a phone), where the treasurer approves, denies, or retries.
+// Tapping a request opens its details in a sheet (side panel on wide
+// screens, full screen on a phone), where the treasurer approves, denies, or retries.
 export default function TreasurerDashboard() {
   const { orgId } = useOrg();
   const authFetch = useAuthFetch();
@@ -138,30 +139,37 @@ export default function TreasurerDashboard() {
 
       {overview ? (
         <OverviewCards overview={overview} orgId={orgId} />
+      ) : overviewFailed ? (
+        <ErrorState
+          what="We couldn't load the club's numbers."
+          todo="Check your connection; we'll keep trying every 30 seconds."
+          onRetry={loadOverview}
+        />
       ) : (
-        <p className="text-zinc-600 dark:text-zinc-400">
-          {overviewFailed ? "We couldn't load the club's numbers. Refresh to try again." : "Loading…"}
-        </p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <LoadingBlocks key={i} rows={1} height="h-24" label="Loading the club's numbers" />
+          ))}
+        </div>
       )}
 
       {overview && (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Invite members with join code{" "}
-          <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-50">{overview.joinCode}</span>
+        <p className="px-1 text-[13px] text-muted">
+          Invite members with join code <span className="font-mono font-semibold text-ink">{overview.joinCode}</span>
           {" · "}
-          <Link href={`/c/${orgId}/treasurer/settings`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
-            Settings
+          <Link href={`/c/${orgId}/treasurer/settings`} className="font-semibold text-ink underline underline-offset-4">
+            Invite link and QR
           </Link>
         </p>
       )}
 
       {notice && !selectedId && (
-        <p role="status" className="rounded-xl bg-zinc-100 px-4 py-3 text-sm dark:bg-zinc-900">
+        <p role="status" className="glass rounded-[12px] px-4 py-3 text-[13px] font-medium">
           {notice}
         </p>
       )}
 
-      <div className={`grid items-start gap-6 ${selectedId ? "lg:grid-cols-[minmax(0,1fr)_26rem]" : ""}`}>
+      <div>
         <RequestTabs
           orgId={orgId}
           tab={tab}
