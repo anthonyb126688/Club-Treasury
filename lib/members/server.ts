@@ -28,7 +28,7 @@ export async function loadMemberList(
   const [memberships, dues, paid] = await Promise.all([
     db()
       .from("org_memberships")
-      .select("privy_user_id, role, status, requested_at, member:members(email, first_name, last_name)")
+      .select("privy_user_id, role, status, requested_at, member:members!org_memberships_privy_user_id_fkey(email, first_name, last_name)")
       .eq("org_id", orgId)
       .in("status", ["pending", "active"]),
     db()
@@ -59,7 +59,7 @@ export type Target = { membership: TargetMembership; solanaAddress: string | nul
 export async function loadTarget(orgId: string, userId: string): Promise<Target> {
   const { data, error } = await db()
     .from("org_memberships")
-    .select("role, status, member:members(solana_address)")
+    .select("role, status, member:members!org_memberships_privy_user_id_fkey(solana_address)")
     .eq("org_id", orgId)
     .eq("privy_user_id", userId)
     .maybeSingle();
