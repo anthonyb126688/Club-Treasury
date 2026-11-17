@@ -1,12 +1,16 @@
 "use client";
 
 import { useSignTransaction } from "@privy-io/react-auth/solana";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 import { useOrg } from "../../../../_components/OrgProvider";
+import { Badge } from "../../../../_components/ui/Badge";
+import { EmptyState, ErrorState, LoadingBlocks } from "../../../../_components/ui/EmptyState";
+import { SectionLabel } from "../../../../_components/ui/GlassCard";
+import { Sheet } from "../../../../_components/ui/Sheet";
 import { useAuthFetch } from "../../../../_components/useAuthFetch";
 import { PageHeader, treasurerPage } from "../../_components/PageHeader";
 
@@ -34,10 +38,10 @@ const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
-const btn = "rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50";
-const outline = `${btn} border border-zinc-300 dark:border-zinc-700`;
-const danger = `${btn} border border-red-600 bg-red-600 text-white`;
-const primary = `${btn} bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-200 dark:hover:bg-brand-900`;
+const btn = "inline-flex min-h-10 items-center justify-center rounded-[12px] px-3 text-[13px] font-semibold disabled:opacity-40";
+const outline = `${btn} glass text-ink hover:bg-white/80`;
+const danger = `${btn} bg-alert text-white`;
+const primary = `${btn} bg-ink text-white hover:bg-zinc-800`;
 
 // Treasurer → Members: approve join requests, see who's paid dues and how
 // much each person has been reimbursed, add a co-treasurer, remove people.
@@ -166,7 +170,7 @@ export default function MembersPage() {
       <main className={treasurerPage}>
         <p>
           This page is for the club treasurer.{" "}
-          <Link href={`/c/${orgId}`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
+          <Link href={`/c/${orgId}`} className="font-semibold underline underline-offset-4">
             Go home
           </Link>
         </p>
@@ -187,11 +191,8 @@ export default function MembersPage() {
           data && (
             <>
               Join code{" "}
-              <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{data.joinCode}</span> ·{" "}
-              <Link
-                href={`/c/${orgId}/treasurer/settings`}
-                className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300"
-              >
+              <span className="font-mono font-semibold text-ink">{data.joinCode}</span> ·{" "}
+              <Link href={`/c/${orgId}/treasurer/settings`} className="font-semibold text-ink underline underline-offset-4">
                 Invite link and QR
               </Link>
             </>
@@ -202,39 +203,39 @@ export default function MembersPage() {
       {notice && (
         <p
           role="status"
-          className={`rounded-xl px-4 py-3 text-sm ${
-            notice.tone === "ok"
-              ? "bg-zinc-100 dark:bg-zinc-900"
-              : "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
-          }`}
+          className={`glass rounded-[12px] px-4 py-3 text-[13px] font-medium ${notice.tone === "ok" ? "" : "text-alert"}`}
         >
           {notice.text}
         </p>
       )}
 
       {!data ? (
-        <p className="text-zinc-600 dark:text-zinc-400">
-          {problem === "failed" ? "We couldn't load the members. Refresh to try again." : "Loading…"}
-        </p>
+        problem === "failed" ? (
+          <ErrorState
+            what="We couldn't load the members."
+            todo="Check your connection; we'll try again in a few seconds."
+            onRetry={load}
+          />
+        ) : (
+          <LoadingBlocks rows={3} height="h-14" label="Loading members" />
+        )
       ) : (
         <>
           {pending.length > 0 && (
-            <section className="flex flex-col gap-3">
-              <h2 className="text-lg font-semibold">
-                Waiting to join <span className="text-zinc-500">({pending.length})</span>
-              </h2>
-              <ul className="flex flex-col gap-3">
+            <section className="flex flex-col gap-2">
+              <SectionLabel>Waiting to join ({pending.length})</SectionLabel>
+              <ul className="glass divide-y divide-black/[0.06] overflow-hidden rounded-[16px]">
                 {pending.map((p) => {
                   const isBusy = busy?.userId === p.userId;
                   const confirming = confirm?.userId === p.userId && confirm.action === "decline";
                   return (
                     <li
                       key={p.userId}
-                      className="flex flex-col gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between dark:border-amber-800 dark:bg-amber-950"
+                      className="fade-in flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">{p.name}</p>
-                        <p className="break-all text-sm text-zinc-600 dark:text-zinc-400">
+                        <p className="truncate text-[15px] font-semibold">{p.name}</p>
+                        <p className="text-[13px] break-words text-muted [overflow-wrap:anywhere]">
                           {p.email ?? "No email"} · asked {shortDate(p.requestedAt)}
                         </p>
                       </div>
@@ -251,7 +252,7 @@ export default function MembersPage() {
                           type="button"
                           disabled={!!busy}
                           onClick={() => act(p, "approve")}
-                          className={`${btn} bg-brand-700 text-white`}
+                          className={primary}
                         >
                           {isBusy ? busy.label : "Approve"}
                         </button>
@@ -263,26 +264,24 @@ export default function MembersPage() {
             </section>
           )}
 
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold">
-              Members <span className="text-zinc-500">({active.length})</span>
-            </h2>
+          <section className="flex flex-col gap-2">
+            <SectionLabel>Members ({active.length})</SectionLabel>
             {active.every((p) => p.isYou) ? (
-              <p className="rounded-xl bg-zinc-100 px-4 py-6 text-center text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
-                No members yet. Share your join code to invite people.
-                <span className="mt-1 block font-mono text-lg font-semibold">{data.joinCode}</span>
-              </p>
+              <EmptyState icon={Users} title="No members yet">
+                Share your join code to invite people:{" "}
+                <span className="font-mono font-semibold text-ink">{data.joinCode}</span>
+              </EmptyState>
             ) : null}
             {active.length > 0 && (
-              <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] gap-3 bg-zinc-50 px-4 py-2 text-sm text-zinc-500 md:grid dark:bg-zinc-900">
+              <div className="glass overflow-hidden rounded-[16px]">
+                <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] gap-3 border-b border-black/[0.06] px-4 py-2 text-[12px] font-semibold text-muted uppercase md:grid">
                   <span>Name</span>
                   <span>Email</span>
                   <span>Role</span>
                   <span>Dues ({data.period.label})</span>
                   <span className="text-right">Reimbursed</span>
                 </div>
-                <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                <ul className="divide-y divide-black/[0.06]">
                   {active.map((p) => (
                     <MemberRow
                       key={p.userId}
@@ -325,17 +324,7 @@ function roleLabel(p: Person) {
 }
 
 function RoleBadge({ person: p }: { person: Person }) {
-  return (
-    <span
-      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-        p.role === "treasurer"
-          ? "bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950"
-          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-      }`}
-    >
-      {roleLabel(p)}
-    </span>
-  );
+  return <Badge tone={p.role === "treasurer" ? "dark" : "neutral"}>{roleLabel(p)}</Badge>;
 }
 
 function MemberRow({
@@ -363,40 +352,40 @@ function MemberRow({
       <button
         type="button"
         onClick={onOpen}
-        className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 md:hidden dark:hover:bg-zinc-800/60"
+        className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-black/[0.03] md:hidden"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-semibold">
+          <span className="block truncate text-[15px] font-semibold">
             {p.name}
-            {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
+            {p.isYou && <span className="font-normal text-muted"> (you)</span>}
           </span>
-          <span className="block truncate text-sm text-zinc-600 dark:text-zinc-400">
+          <span className="block truncate text-[13px] text-muted">
             {roleLabel(p)} · {p.duesPaidThisPeriod ? "Dues paid" : "Dues not paid"}
           </span>
         </span>
         <span className="shrink-0 text-right">
-          <span className="block font-semibold tabular-nums">{p.totalReimbursed}</span>
-          <span className="block text-xs text-zinc-500">reimbursed</span>
+          <span className="block text-[15px] font-semibold tabular-nums">{p.totalReimbursed}</span>
+          <span className="block text-[12px] text-muted">reimbursed</span>
         </span>
         <ChevronRight size={18} strokeWidth={1.75} aria-hidden className="shrink-0 text-zinc-400" />
       </button>
 
       {/* Wider screens: a table row with the actions inline. */}
       <div className="hidden flex-col gap-3 px-4 py-3 md:flex">
-        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] items-center gap-x-3 text-sm">
-          <p className="truncate font-semibold">
+        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] items-center gap-x-3 text-[13px]">
+          <p className="truncate text-[15px] font-semibold">
             {p.name}
-            {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
+            {p.isYou && <span className="font-normal text-muted"> (you)</span>}
           </p>
-          <p className="truncate text-zinc-600 dark:text-zinc-400">{p.email ?? "No email"}</p>
+          <p className="truncate text-muted">{p.email ?? "No email"}</p>
           <p>
             <RoleBadge person={p} />
           </p>
-          <p className={p.duesPaidThisPeriod ? "text-brand-700 dark:text-brand-300" : "text-zinc-600 dark:text-zinc-400"}>
+          <p className={p.duesPaidThisPeriod ? "font-semibold" : "text-muted"}>
             {p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}
             <span className="sr-only"> ({periodLabel})</span>
           </p>
-          <p className="text-right tabular-nums">{p.totalReimbursed}</p>
+          <p className="text-right font-semibold tabular-nums">{p.totalReimbursed}</p>
         </div>
         <MemberActions
           person={p}
@@ -411,7 +400,7 @@ function MemberRow({
   );
 }
 
-// Phones: one person, full screen, with what the treasurer can do.
+// Phones: one person in a sheet, with what the treasurer can do.
 function MemberSheet({
   person: p,
   periodLabel,
@@ -425,64 +414,37 @@ function MemberSheet({
   onClose: () => void;
   children: ReactNode;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={p.name}
-      className="fixed inset-0 z-40 flex flex-col gap-5 overflow-y-auto overscroll-contain bg-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:hidden dark:bg-zinc-950"
-    >
-      <button
-        type="button"
-        onClick={onClose}
-        autoFocus
-        className="flex min-h-11 items-center gap-2 self-start rounded-full pr-3 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-      >
-        <ArrowLeft size={18} strokeWidth={1.75} aria-hidden />
-        Back to members
-      </button>
+    <Sheet title={p.isYou ? `${p.name} (you)` : p.name} onClose={onClose}>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col items-start gap-2 px-1">
+          <p className="text-[15px] break-all text-muted">{p.email ?? "No email"}</p>
+          <RoleBadge person={p} />
+        </div>
 
-      <div className="flex flex-col items-start gap-2">
-        <h2 className="text-2xl font-semibold break-words">
-          {p.name}
-          {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
-        </h2>
-        <p className="text-sm break-all text-zinc-600 dark:text-zinc-400">{p.email ?? "No email"}</p>
-        <RoleBadge person={p} />
+        <dl className="grid grid-cols-2 gap-3">
+          <div className="glass rounded-[16px] p-3">
+            <dt className="text-[13px] text-muted">Dues · {periodLabel}</dt>
+            <dd className="mt-1 text-[15px] font-semibold">{p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}</dd>
+          </div>
+          <div className="glass rounded-[16px] p-3">
+            <dt className="text-[13px] text-muted">Reimbursed</dt>
+            <dd className="mt-1 text-[20px] font-bold tabular-nums">{p.totalReimbursed}</dd>
+          </div>
+        </dl>
+
+        {notice && (
+          <p
+            role="status"
+            className={`glass rounded-[12px] px-4 py-3 text-[13px] font-medium ${notice.tone === "ok" ? "" : "text-alert"}`}
+          >
+            {notice.text}
+          </p>
+        )}
+
+        {children}
       </div>
-
-      <dl className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-zinc-100 p-3 dark:bg-zinc-900">
-          <dt className="text-sm text-zinc-600 dark:text-zinc-400">Dues · {periodLabel}</dt>
-          <dd className={`mt-1 font-semibold ${p.duesPaidThisPeriod ? "text-brand-700 dark:text-brand-300" : ""}`}>
-            {p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}
-          </dd>
-        </div>
-        <div className="rounded-2xl bg-zinc-100 p-3 dark:bg-zinc-900">
-          <dt className="text-sm text-zinc-600 dark:text-zinc-400">Reimbursed</dt>
-          <dd className="mt-1 font-display text-xl font-semibold tabular-nums">{p.totalReimbursed}</dd>
-        </div>
-      </dl>
-
-      {notice && (
-        <p
-          role="status"
-          className={`rounded-xl px-4 py-3 text-sm ${
-            notice.tone === "ok" ? "bg-zinc-100 dark:bg-zinc-900" : "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
-          }`}
-        >
-          {notice.text}
-        </p>
-      )}
-
-      {children}
-    </div>
+    </Sheet>
   );
 }
 
@@ -506,13 +468,13 @@ function MemberActions({
   return (
     <div className="flex flex-wrap gap-2">
       {busyLabel ? (
-        <span className="py-2 text-sm text-zinc-600 dark:text-zinc-400">{busyLabel}</span>
+        <span className="py-2 text-[13px] text-muted">{busyLabel}</span>
       ) : treasurer ? (
         <>
           {p.isFounder && !p.isYou ? (
-            <span className="py-1 text-xs text-zinc-500">Founded the club. Only they can step down.</span>
+            <span className="py-1 text-[12px] text-muted">Founded the club. Only they can step down.</span>
           ) : onlyTreasurer ? (
-            <span className="py-1 text-xs text-zinc-500">
+            <span className="py-1 text-[12px] text-muted">
               The only treasurer. Make someone else co-treasurer before stepping down.
             </span>
           ) : (

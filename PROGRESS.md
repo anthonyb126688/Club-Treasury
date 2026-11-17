@@ -14,7 +14,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 |---|---|---|
 | 1 Design system | ui-1-tokens | DONE |
 | 2 App shell | ui-2-shell | DONE |
-| 3 Restyle every screen | ui-3-pages | IN PROGRESS: Home, Get reimbursed, Budget (member), Activity + public ledger, Approvals done; next Members |
+| 3 Restyle every screen | ui-3-pages | IN PROGRESS: Home, Get reimbursed, Budget (member), Activity + public ledger, Approvals, Members done; next Budget builder + Settings |
 | 4 Insights backend | insights-4-api | not started |
 | 5 Live data | insights-5-live | not started |
 | 6 Insights page | insights-6-page | not started |
@@ -77,6 +77,7 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - On phones under 420px, the Get reimbursed button hides its icon so the text fits on one line.
 - Phase 3 Budget (member): the old amber "80% used" color was dropped. The member API has no pace data, and orange is reserved for "ahead of pace". Bars are black, and red only when over budget.
 - Phase 3 Approvals: the request detail now opens in the shared `Sheet` (bottom sheet on phones, a slide-in side panel over the page at lg+) instead of the old inline column. The tabs are a `SegmentedControl` with counts (red when something needs approval). The "Waiting for you" tile is red when above 0.
+- Phase 3 Members: on phones, each person is a row that opens the shared `Sheet` with their actions. On md+ it's a glass table with inline actions. Join requests are a glass list with black Approve and glass Decline buttons (red when confirming).
 - Phase 3 public ledger: the logged-out header is a glass pill with the logo and "Log in" (or "Open the app" when logged in). The page title is "Public ledger" and the in-app title is "Activity".
 
 ## Skipped / reverted
