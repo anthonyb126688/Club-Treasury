@@ -1,22 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { PrivyClientProvider } from "@/lib/wallets/PrivyClientProvider";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "Club Treasury",
@@ -26,19 +10,21 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   // Lets pages pad around the iPhone home bar with env(safe-area-inset-*).
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f8f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1210" },
-  ],
+  themeColor: "#e9e9ec",
+  colorScheme: "light",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
+        {/* Soft blurred gray shapes behind everything, for the glass to frost. */}
+        <div aria-hidden className="backdrop-shapes">
+          <span style={{ width: 520, height: 520, top: -160, left: -140, background: "#d4d4da" }} />
+          <span style={{ width: 460, height: 460, top: "35%", right: -160, background: "#f7f7f9" }} />
+          <span style={{ width: 420, height: 420, bottom: -180, left: "20%", background: "#cfcfd6" }} />
+          <span style={{ width: 300, height: 300, top: "15%", left: "45%", background: "#ffffff" }} />
+        </div>
         <PrivyClientProvider>{children}</PrivyClientProvider>
       </body>
     </html>

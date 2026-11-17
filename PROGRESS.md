@@ -12,7 +12,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 ## Status
 | Phase | Tag | State |
 |---|---|---|
-| 1 Design system | ui-1-tokens | not started |
+| 1 Design system | ui-1-tokens | DONE |
 | 2 App shell | ui-2-shell | partly exists (see "Starting point") |
 | 3 Restyle every screen | ui-3-pages | not started |
 | 4 Insights backend | insights-4-api | not started |
@@ -56,9 +56,21 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
 
 ## Decisions I made
 - Rebuild on top of the existing shell commit instead of reverting it, because most of its structure matches the brief.
+- Phase 1: old color names point at the new palette so nothing breaks before restyling:
+  - `zinc-*` = true grays
+  - `brand-50..400` = light-to-mid grays, `brand-600..950` = black (#0a0a0a / #1c1c1e)
+  - `gold-*` = light grays (so the old gold button with black text stays readable)
+- New color tokens: `ink` #0a0a0a, `page` #e9e9ec, `alert` #FF3B30, `warn` #FF9500 / `warn-text` #C93400, `income` #248A3D, plus `muted` and `hairline`. Glass is a plain CSS class, `.glass`, with `.glass-strong` for the current nav item; both fall back to solid #fafafa.
+- `sheet-up` and `sheet-side` are Tailwind `@utility` entries so `lg:sheet-side` works.
+- The old `app/c/[orgId]/_components/PageHeader.tsx` now re-exports the new `app/_components/ui/PageHeader` (it still holds the page-width class strings).
+- `lucide-react` is pinned at 1.68.0 (added earlier).
 
 ## Skipped / reverted
 - (none yet)
 
 ## Log
 - Nov 17: wrote this file. Nothing from the new plan built yet.
+- Phase 1 done:
+  - `globals.css` rewritten (light only, glass, system font, emphasis colors); layout drops Geist and Bricolage and adds the blurred background shapes; themeColor is #e9e9ec.
+  - `app/_components/ui/`: GlassCard (+SectionLabel), Button (+ButtonLink, buttonClass), PageHeader, StatTile, SegmentedControl, ProgressBar (pace tick), ListRow (+IconTile, ListGroup), Badge (+CountBadge), Sheet, EmptyState (+ErrorState, LoadingBlocks).
+  - lint, tests and build are green. Screenshot: `.playwright-mcp/redesign/p1-home-390.png`.

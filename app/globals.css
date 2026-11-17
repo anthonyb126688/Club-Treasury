@@ -1,85 +1,162 @@
 @import "tailwindcss";
 
 /*
- * Club Treasury design tokens.
- * Pine green (the club's money) + pennant gold (used sparingly), on a cool,
- * slightly green-tinted neutral. The zinc ramp is redefined here so every
- * screen that uses zinc-* picks up the same neutrals.
+ * Club Treasury design tokens: clean, current-iOS, black and white with
+ * frosted glass. Color only marks something that needs attention:
+ *   red    = needs action / error / over budget
+ *   orange = ahead of pace (warning)
+ *   green  = money coming in
+ * Light only: nothing ever sets .dark, so every old dark: class is inert.
  */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-zinc-50: #f6f8f6;
-  --color-zinc-100: #edf1ee;
-  --color-zinc-200: #dee4e0;
-  --color-zinc-300: #c6cec9;
-  --color-zinc-400: #95a09a;
-  --color-zinc-500: #69746e;
-  --color-zinc-600: #4e5852;
-  --color-zinc-700: #39423d;
-  --color-zinc-800: #252c28;
-  --color-zinc-900: #161c19;
-  --color-zinc-950: #0d1210;
+  /* Neutrals (true grays). zinc-* is used all over the old screens. */
+  --color-zinc-50: #f7f7f8;
+  --color-zinc-100: #efeff2;
+  --color-zinc-200: #e2e2e6;
+  --color-zinc-300: #c9c9ce;
+  --color-zinc-400: #a1a1a6;
+  --color-zinc-500: #77777c;
+  --color-zinc-600: #5a5a5f;
+  --color-zinc-700: #3f3f43;
+  --color-zinc-800: #2a2a2d;
+  --color-zinc-900: #18181a;
+  --color-zinc-950: #0a0a0a;
 
-  --color-brand-50: #eef6f1;
-  --color-brand-100: #d6eadf;
-  --color-brand-200: #afd5c1;
-  --color-brand-300: #7fba9c;
-  --color-brand-400: #4f9c79;
-  --color-brand-500: #2f7f5d;
-  --color-brand-600: #1f6449;
-  --color-brand-700: #194f3b;
-  --color-brand-800: #153f30;
-  --color-brand-900: #113327;
-  --color-brand-950: #0a1f18;
+  /*
+   * Old brand-* (pine green) and gold-* names, pointed at grays and black
+   * until every screen is restyled. Light shades stay light, dark shades
+   * become black, so old "white text on brand-700" and "brand-950 text on
+   * gold-400" pairs stay readable.
+   */
+  --color-brand-50: #f2f2f5;
+  --color-brand-100: #e6e6ea;
+  --color-brand-200: #d2d2d7;
+  --color-brand-300: #a1a1a6;
+  --color-brand-400: #6e6e73;
+  --color-brand-500: #3a3a3c;
+  --color-brand-600: #0a0a0a;
+  --color-brand-700: #1c1c1e;
+  --color-brand-800: #0a0a0a;
+  --color-brand-900: #0a0a0a;
+  --color-brand-950: #0a0a0a;
 
-  --color-gold-200: #fbe3a8;
-  --color-gold-300: #f8d27a;
-  --color-gold-400: #f3b83c;
-  --color-gold-500: #e09e1a;
-  --color-gold-600: #b87d0c;
+  --color-gold-200: #f2f2f5;
+  --color-gold-300: #e6e6ea;
+  --color-gold-400: #dcdce1;
+  --color-gold-500: #c9c9ce;
+  --color-gold-600: #a1a1a6;
+
+  /* The new palette. */
+  --color-ink: #0a0a0a;
+  --color-page: #e9e9ec;
+  --color-alert: #ff3b30;
+  --color-warn: #ff9500;
+  --color-warn-text: #c93400;
+  --color-income: #248a3d;
+
+  --radius-card: 16px;
+  --radius-control: 12px;
 }
 
 :root {
-  --background: #f6f8f6;
-  --foreground: #161c19;
+  color-scheme: light;
+  --background: #e9e9ec;
+  --foreground: #0a0a0a;
+  --muted: #6e6e73;
+  --hairline: rgb(0 0 0 / 0.08);
+  --glass-bg: rgb(255 255 255 / 0.55);
+  --glass-border: rgb(255 255 255 / 0.85);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif, sans-serif;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0d1210;
-    --foreground: #e9eeea;
-  }
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Headings and big dollar amounts use the display face. */
+/* Big bold titles with tight letter-spacing. */
 h1,
 h2,
 .font-display {
   font-family: var(--font-display);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.022em;
 }
 
 h3 {
   letter-spacing: -0.01em;
 }
 
+/* Money always lines up. */
+.tabular-nums,
+[data-money] {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Frosted glass: cards, the nav rail, the top bar, the tab bar and sheets.
+ * Browsers without backdrop-filter get a solid near-white instead.
+ */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 0.5px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.9),
+    0 1px 2px rgb(0 0 0 / 0.04),
+    0 8px 24px -12px rgb(0 0 0 / 0.08);
+}
+
+/* A slightly darker glass, for the current nav item and pressed states. */
+.glass-strong {
+  background: rgb(255 255 255 / 0.8);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  border: 0.5px solid var(--glass-border);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 1),
+    0 1px 3px rgb(0 0 0 / 0.08);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .glass-strong {
+    background: #fafafa;
+  }
+}
+
+/* The soft gray shapes behind everything, so the glass has something to frost. */
+.backdrop-shapes {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--background);
+}
+
+.backdrop-shapes span {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+}
+
 /* One clear focus ring everywhere, for keyboard users. */
 :focus-visible {
-  outline: 2px solid var(--color-brand-500);
+  outline: 2px solid #0a0a0a;
   outline-offset: 2px;
   border-radius: 0.75rem;
 }
@@ -120,8 +197,8 @@ a:active {
   inset-inline: 0;
   top: 0;
   height: 3rem;
-  background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--color-brand-400) 35%, transparent));
-  border-bottom: 2px solid var(--color-brand-500);
+  background: linear-gradient(to bottom, transparent, rgb(10 10 10 / 0.12));
+  border-bottom: 2px solid #0a0a0a;
   animation: receipt-scan 1.6s ease-in-out infinite alternate;
 }
 
@@ -146,13 +223,35 @@ a:active {
   }
 }
 
-/* The phone "More" sheet slides up from the bottom. */
-.sheet-up {
-  animation: sheet-up 220ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+/* Sheets slide up from the bottom on phones. */
+@utility sheet-up {
+  animation: sheet-up 240ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 
 @keyframes sheet-up {
   from {
     transform: translateY(100%);
+  }
+}
+
+/* Side panels slide in from the right on wide screens. */
+@utility sheet-side {
+  animation: sheet-side 240ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes sheet-side {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+/* New list rows fade in. */
+.fade-in {
+  animation: fade-in 300ms ease-out both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 }
