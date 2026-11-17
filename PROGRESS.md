@@ -15,7 +15,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 | 1 Design system | ui-1-tokens | DONE |
 | 2 App shell | ui-2-shell | DONE |
 | 3 Restyle every screen | ui-3-pages | DONE |
-| 4 Insights backend | insights-4-api | not started |
+| 4 Insights backend | insights-4-api | IN PROGRESS: pure functions + tests done (commit b86e068); next types.ts + routes |
 | 5 Live data | insights-5-live | not started |
 | 6 Insights page | insights-6-page | not started |
 | 7 Final check | ui-final | not started |
@@ -84,6 +84,17 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
 - The "bigint: Failed to load bindings" lines during `npm run build` are an old, harmless dependency warning; the build exits 0.
 - Phase 3 public ledger: the logged-out header is a glass pill with the logo and "Log in" (or "Open the app" when logged in). The page title is "Public ledger" and the in-app title is "Activity".
 
+- Phase 4 decisions:
+  - Months are bucketed in America/Chicago (`lib/insights/ranges.ts`).
+  - "Semester" uses the app's existing semester rule (Spring Jan–May, Summer Jun–Jul, Fall Aug–Dec, from `lib/dues/period.ts`). That equals the club's dues period when dues are per semester, and is the matching term otherwise. (The brief said Aug–Dec / Jan–May; summer stays Jun–Jul to match the rest of the app.)
+  - Range "elapsed share" uses UTC month boundaries; it's off by a few hours at most, which is fine for a pace tick.
+  - Spent = SPENT_STATUSES counted by decided_at (same as the overview's budget bars). Per-member spending = status "paid", counted by paid_at.
+  - Budget for a range: month budgets × months in the period; semester budgets spread evenly over the semester's months (5, or 2 for summer). Archived categories are left out of budgets and pace, but their past spending still shows in totals.
+  - A $0-budget category with any spending counts as "over budget" in pace.
+  - Spending by member lists every active member (zeros at the bottom) so the dues marker shows for everyone.
+  - Runway uses the number of months in the range so far (including the current month) as the divisor.
+  - CSV: formula-looking strings get a leading apostrophe; booleans become Yes/No; UTF-8 BOM; CRLF line endings.
+
 ## Skipped / reverted
 - (none yet)
 
@@ -100,5 +111,6 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - lint, tests and build are green. Screenshots: `.playwright-mcp/redesign/p2-*.png`.
   - Note: `npx tsc` shows stale errors about `.next/types` after a route rename until the next build; this is not a real error.
 - Phase 3 done (one commit per page): Home; Get reimbursed; Budget (member); Activity + public ledger (one shared component, `LedgerView`); Approvals; Members; Budget builder; Settings; Login + onboarding. Nothing scrolls sideways at 390px (checked with scrollWidth). Build green. Tag `ui-3-pages`.
-- NEXT: Phase 4 (Insights backend). Start with `lib/insights/ranges.ts` + tests.
+- Phase 4 so far: `lib/insights/` ranges, spending, pace, cashflow, byMember, vendors, csv, with 7 test files (34 tests, all green).
+- NEXT: `lib/insights/types.ts`, a server loader, `app/api/orgs/[orgId]/treasurer/insights/route.ts` and `.../treasurer/export/route.ts`, plus an isolation test.
 - Phase 3, page 1 (Home) done: glass balance card (club balance big, your balance small, black Get reimbursed, glass Pay dues), budget ring, dues status, My requests in a glass list with a black step bar, Recent activity (latest 5, "See all").
