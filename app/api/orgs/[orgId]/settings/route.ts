@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { SettingsPatchBody } from "@/lib/budget/settings";
 import { requireTreasurer } from "@/lib/orgs/access";
+import { settleVaultChanges } from "@/lib/orgs/vault";
 import { loadOrgSettings } from "@/lib/orgs/settings";
 import { updateOrgSettings } from "@/lib/orgs/settings-write";
 
@@ -15,6 +16,8 @@ export async function GET(request: Request, ctx: RouteContext<"/api/orgs/[orgId]
   const access = await requireTreasurer(request, orgId);
   if (access instanceof Response) return access;
   try {
+    // Finish any daily-limit change whose confirmation was slow, so the limit shown is current.
+    await settleVaultChanges(orgId).catch((e) => console.error("settle vault changes:", (e as Error).message));
     const settings = await loadOrgSettings(orgId);
     return Response.json({
       settings,
