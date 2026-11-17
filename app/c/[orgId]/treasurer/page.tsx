@@ -145,7 +145,7 @@ export default function TreasurerDashboard() {
           Invite members with join code{" "}
           <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-50">{overview.joinCode}</span>
           {" · "}
-          <Link href={`/c/${orgId}/treasurer/settings`} className="underline">
+          <Link href={`/c/${orgId}/treasurer/settings`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
             Settings
           </Link>
         </p>

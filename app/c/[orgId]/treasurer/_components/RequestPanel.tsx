@@ -50,7 +50,7 @@ export function RequestPanel({
       className="fixed inset-0 z-40 overflow-y-auto bg-white px-4 py-4 dark:bg-zinc-950 lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100vh-2rem)] lg:rounded-2xl lg:border lg:border-zinc-200 lg:dark:border-zinc-800"
     >
       <div className="mb-4 flex items-center justify-between gap-2">
-        <button type="button" onClick={onClose} className="text-sm text-zinc-600 underline dark:text-zinc-400">
+        <button type="button" onClick={onClose} className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300">
           <span className="lg:hidden">← Back to requests</span>
           <span className="hidden lg:inline">Close</span>
         </button>
@@ -114,7 +114,7 @@ function PanelBody({
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Sent {longDate(d.submittedAt)}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-2xl font-semibold tabular-nums">{d.amount}</p>
+          <p className="font-display text-2xl font-semibold tabular-nums">{d.amount}</p>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{d.category}</p>
         </div>
       </div>
@@ -131,7 +131,7 @@ function PanelBody({
       )}
 
       {d.status === "paid" && (
-        <div className="flex flex-col gap-1 rounded-xl bg-green-50 px-3 py-2 text-sm text-green-900 dark:bg-green-950 dark:text-green-200">
+        <div className="flex flex-col gap-1 rounded-xl bg-brand-50 px-3 py-2 text-sm text-brand-900 dark:bg-brand-950 dark:text-brand-200">
           <p>Paid {d.paidAt ? longDate(d.paidAt) : ""}</p>
           {d.verifyUrl && (
             <a href={d.verifyUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline">
@@ -209,7 +209,7 @@ function PanelBody({
           type="button"
           disabled={busy}
           onClick={onRetry}
-          className="w-full rounded-xl bg-zinc-900 px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+          className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
         >
           {busy ? "Working…" : `Retry payout of ${d.amount}`}
         </button>
@@ -273,7 +273,7 @@ function PanelBody({
                 type="button"
                 disabled={busy || !canApprove}
                 onClick={onApprove}
-                className="rounded-xl bg-green-700 px-4 py-3 font-medium text-white disabled:opacity-50"
+                className="rounded-xl bg-brand-700 px-4 py-3 font-medium text-white disabled:opacity-50"
               >
                 {busy ? "Paying…" : `Approve ${d.amount}`}
               </button>

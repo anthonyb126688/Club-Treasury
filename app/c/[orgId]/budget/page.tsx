@@ -52,7 +52,7 @@ export default function BudgetPage() {
             How {club?.name ?? "the club"} is spending its money.
           </p>
         </div>
-        <Link href={`/c/${orgId}`} className="shrink-0 py-1 text-sm text-zinc-600 underline dark:text-zinc-400">
+        <Link href={`/c/${orgId}`} className="shrink-0 rounded-full px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900">
           Home
         </Link>
       </div>
@@ -68,7 +68,7 @@ export default function BudgetPage() {
       ) : (
         <ul className="flex flex-col gap-3">
           {categories.map((c) => (
-            <li key={c.slug} className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+            <li key={c.slug} className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <div className="flex items-baseline justify-between gap-3">
                 <p className="min-w-0 truncate font-medium">{c.name}</p>
                 <p className="shrink-0 text-sm text-zinc-600 dark:text-zinc-400">{c.periodLabel}</p>
@@ -86,7 +86,7 @@ export default function BudgetPage() {
                   >
                     <div
                       className={`h-full rounded-full ${
-                        c.overBy ? "bg-red-600" : c.percentUsed >= 80 ? "bg-amber-500" : "bg-zinc-900 dark:bg-zinc-100"
+                        c.overBy ? "bg-red-600" : c.percentUsed >= 80 ? "bg-amber-500" : "bg-brand-600 dark:bg-brand-400"
                       }`}
                       style={{ width: `${c.percentUsed}%` }}
                     />
@@ -98,7 +98,7 @@ export default function BudgetPage() {
                     </p>
                     <p
                       className={`shrink-0 font-medium tabular-nums ${
-                        c.overBy ? "text-red-700 dark:text-red-400" : "text-green-700 dark:text-green-400"
+                        c.overBy ? "text-red-700 dark:text-red-400" : "text-brand-700 dark:text-brand-300"
                       }`}
                     >
                       {c.overBy ? `${c.overBy} over` : `${c.remaining} left`}

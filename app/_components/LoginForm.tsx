@@ -41,13 +41,13 @@ export function LoginForm() {
   }
 
   const input =
-    "w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-200";
+    "w-full rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-base text-zinc-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-brand-400";
   const button =
-    "w-full rounded-xl bg-zinc-900 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900";
+    "w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950";
 
   return step === "email" ? (
     <form onSubmit={onSendCode} className="flex w-full flex-col gap-3">
-      <label htmlFor="email" className="text-sm text-zinc-600 dark:text-zinc-400">
+      <label htmlFor="email" className="text-sm font-medium">
         Log in with your email
       </label>
       <input
@@ -68,7 +68,7 @@ export function LoginForm() {
     </form>
   ) : (
     <form onSubmit={onLogIn} className="flex w-full flex-col gap-3">
-      <label htmlFor="code" className="text-sm text-zinc-600 dark:text-zinc-400">
+      <label htmlFor="code" className="text-sm font-medium">
         Enter the 6-digit code we sent to {email}
       </label>
       <input
@@ -80,7 +80,7 @@ export function LoginForm() {
         placeholder="123456"
         value={code}
         onChange={(e) => setCode(e.target.value)}
-        className={`${input} tracking-widest`}
+        className={`${input} text-center font-display text-2xl tracking-[0.4em]`}
       />
       <button type="submit" disabled={busy} className={button}>
         {busy ? "Logging in…" : "Log in"}
@@ -93,7 +93,7 @@ export function LoginForm() {
           setCode("");
           setError(null);
         }}
-        className="text-sm text-zinc-600 underline dark:text-zinc-400"
+        className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300"
       >
         Use a different email
       </button>

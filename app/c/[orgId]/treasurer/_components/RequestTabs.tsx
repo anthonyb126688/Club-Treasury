@@ -10,7 +10,7 @@ const STATUS_STYLE: Record<string, string> = {
   queued: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   payment_failed: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
   rejected: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
-  paid: "bg-green-100 text-green-900 dark:bg-green-950 dark:text-green-200",
+  paid: "bg-brand-100 text-brand-900 dark:bg-brand-950 dark:text-brand-200",
 };
 
 function EmptyState({ tab, overview, orgId }: { tab: TabCode; overview: Overview | null; orgId: string }) {
@@ -64,7 +64,7 @@ export function RequestTabs({
   const rows = list && list.tab === tab ? list.rows : null;
   return (
     <section className="flex min-w-0 flex-col gap-3">
-      <div role="tablist" aria-label="Requests" className="flex gap-1 overflow-x-auto border-b border-zinc-200 dark:border-zinc-800">
+      <div role="tablist" aria-label="Requests" className="flex gap-1 overflow-x-auto [scrollbar-width:none] border-b border-zinc-200 dark:border-zinc-800">
         {TABS.map((t) => {
           const count = list?.counts[t];
           const active = t === tab;

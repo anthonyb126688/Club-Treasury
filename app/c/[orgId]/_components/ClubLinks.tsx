@@ -11,16 +11,16 @@ export function ClubLinks({ orgId, isTreasurer }: { orgId: string; isTreasurer: 
       : []),
   ];
   return (
-    <nav className="flex flex-col divide-y divide-zinc-200 rounded-2xl border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+    <nav className="flex flex-col divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
       {links.map((l) => (
-        <Link key={l.href} href={l.href} className="flex items-center justify-between gap-3 px-4 py-4 active:bg-zinc-50 dark:active:bg-zinc-900">
+        <Link key={l.href} href={l.href} className="flex items-center justify-between gap-3 px-4 py-4 hover:bg-zinc-50 dark:hover:bg-zinc-800/60">
           <span className="min-w-0">
             <span className="block font-medium">{l.title}</span>
             <span className="block text-sm text-zinc-600 dark:text-zinc-400">{l.hint}</span>
           </span>
-          <span aria-hidden className="text-zinc-400">
-            ›
-          </span>
+          <svg viewBox="0 0 16 16" aria-hidden className="h-4 w-4 shrink-0 text-zinc-400">
+            <path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </Link>
       ))}
     </nav>

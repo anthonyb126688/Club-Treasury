@@ -52,7 +52,7 @@ function Setup({ orgId, me }: { orgId: string; me: OnboardingMe }) {
     return (
       <div className="flex flex-col gap-4">
         <p>Only the club&apos;s treasurer can set it up.</p>
-        <Link href="/" className="underline">
+        <Link href="/" className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
           Go to my clubs
         </Link>
       </div>
@@ -69,7 +69,7 @@ function Setup({ orgId, me }: { orgId: string; me: OnboardingMe }) {
           {[1, 2, 3].map((n) => (
             <span
               key={n}
-              className={`h-1 flex-1 rounded-full ${n <= step ? "bg-zinc-900 dark:bg-zinc-50" : "bg-zinc-200 dark:bg-zinc-800"}`}
+              className={`h-1 flex-1 rounded-full ${n <= step ? "bg-brand-600 dark:bg-brand-400" : "bg-zinc-200 dark:bg-zinc-800"}`}
             />
           ))}
         </div>
@@ -167,7 +167,7 @@ function DuesStep({
               key={value}
               className={`cursor-pointer rounded-xl border px-4 py-3 text-center ${
                 period === value
-                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900"
+                  ? "border-brand-600 bg-brand-600 hover:bg-brand-700 text-white dark:border-brand-400 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
                   : "border-zinc-300 dark:border-zinc-700"
               }`}
             >

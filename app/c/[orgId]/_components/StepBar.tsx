@@ -16,8 +16,8 @@ export function StepBar({ current }: { current: Step }) {
               className={`h-1.5 rounded-full ${
                 reached
                   ? done
-                    ? "bg-green-600 dark:bg-green-500"
-                    : "bg-zinc-900 dark:bg-zinc-100"
+                    ? "bg-brand-600 dark:bg-brand-400"
+                    : "bg-brand-600 dark:bg-brand-400"
                   : "bg-zinc-200 dark:bg-zinc-800"
               }`}
             />
@@ -25,7 +25,7 @@ export function StepBar({ current }: { current: Step }) {
               className={`text-xs ${
                 isCurrent
                   ? done
-                    ? "font-semibold text-green-700 dark:text-green-400"
+                    ? "font-semibold text-brand-700 dark:text-brand-300"
                     : "font-semibold text-zinc-900 dark:text-zinc-100"
                   : "text-zinc-500"
               }`}

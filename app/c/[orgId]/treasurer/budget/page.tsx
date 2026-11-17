@@ -40,9 +40,9 @@ const ERRORS: Record<string, string> = {
 const errorText = (code: string | undefined) => (code && ERRORS[code]) || "That didn't work. Try again.";
 
 const inputClass =
-  "rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base dark:border-zinc-700 dark:bg-zinc-950";
+  "rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-brand-400";
 const primaryButton =
-  "rounded-xl bg-zinc-900 px-4 py-2 font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900";
+  "rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-2 font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950";
 const secondaryButton = "rounded-xl border border-zinc-300 px-4 py-2 font-medium disabled:opacity-50 dark:border-zinc-700";
 
 export default function BudgetPage() {
@@ -94,10 +94,10 @@ export default function BudgetPage() {
   const archived = categories?.filter((c) => c.archived) ?? [];
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pb-12">
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-12 *:max-w-3xl">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold tracking-tight">Budget</h1>
-        <Link href={`/c/${orgId}/treasurer`} className="text-sm text-zinc-600 underline dark:text-zinc-400">
+        <Link href={`/c/${orgId}/treasurer`} className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300">
           Treasurer
         </Link>
       </div>
@@ -307,7 +307,7 @@ function CategoryCard({
             aria-label={`${c.name} budget used`}
           >
             <div
-              className={`h-full rounded-full ${over || c.percentUsed >= 100 ? "bg-red-500" : c.percentUsed >= 80 ? "bg-amber-500" : "bg-green-600"}`}
+              className={`h-full rounded-full ${over || c.percentUsed >= 100 ? "bg-red-500" : c.percentUsed >= 80 ? "bg-amber-500" : "bg-brand-600"}`}
               style={{ width: `${c.percentUsed}%` }}
             />
           </div>

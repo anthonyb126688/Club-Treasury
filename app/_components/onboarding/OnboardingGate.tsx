@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { LoginForm } from "../LoginForm";
+import { Wordmark } from "../Mark";
 import { NameForm } from "./NameForm";
 import { mutedText } from "./styles";
 import { useMe, type OnboardingMe } from "./useMe";
@@ -17,8 +18,8 @@ export function OnboardingShell({ children }: { children: ReactNode }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-4 py-10">
       <header className="flex items-center justify-between gap-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
-          Club Treasury
+        <Link href="/" aria-label="Club Treasury home">
+          <Wordmark />
         </Link>
         {authenticated && (
           <button type="button" onClick={logout} className={`text-sm underline ${mutedText}`}>

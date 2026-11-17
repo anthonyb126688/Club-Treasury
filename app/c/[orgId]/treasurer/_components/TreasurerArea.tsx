@@ -22,7 +22,7 @@ export function TreasurerArea({ children }: { children: ReactNode }) {
         </p>
         <Link
           href={`/c/${orgId}`}
-          className="self-start rounded-xl bg-zinc-900 px-4 py-3 font-medium text-white dark:bg-zinc-50 dark:text-zinc-900"
+          className="self-start rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 font-medium text-white dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
         >
           Go to member view
         </Link>
@@ -42,7 +42,7 @@ export function TreasurerArea({ children }: { children: ReactNode }) {
   return (
     <>
       <nav aria-label="Treasurer" className="mx-auto w-full max-w-5xl px-4 pb-4">
-        <div className="flex items-center gap-1 overflow-x-auto rounded-2xl bg-zinc-100 p-1 text-sm dark:bg-zinc-900">
+        <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] rounded-2xl bg-zinc-100 p-1 text-sm dark:bg-zinc-900">
           {links.map((l) => {
             const active = isActive(l.href, l.exact);
             return (

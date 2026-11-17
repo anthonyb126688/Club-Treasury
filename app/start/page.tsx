@@ -30,7 +30,7 @@ export default function StartPage() {
                 <ul className="flex flex-col gap-2">
                   {pending.map((c) => (
                     <li key={c.id}>
-                      <Link href={`/waiting/${c.id}`} className="underline">
+                      <Link href={`/waiting/${c.id}`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
                         Waiting to join {c.name}
                       </Link>
                     </li>

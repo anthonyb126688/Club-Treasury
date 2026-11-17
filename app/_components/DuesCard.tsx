@@ -109,7 +109,7 @@ export function DuesCard({
   }
 
   return (
-    <section className="rounded-2xl border border-zinc-200 p-5 dark:border-zinc-800">
+    <section className="rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold">Dues</h2>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">{dues ? `${dues.amount} · ${dues.term}` : "…"}</p>
@@ -117,11 +117,11 @@ export function DuesCard({
 
       <div className="mt-4">
         {dues?.status === "paid" ? (
-          <p className="rounded-xl bg-green-50 px-4 py-3 text-center font-medium text-green-800 dark:bg-green-950 dark:text-green-200">
+          <p className="rounded-xl bg-brand-50 px-4 py-3 text-center font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-200">
             ✓ Paid for {dues.term}
           </p>
         ) : dues?.status === "pending" ? (
-          <p className="rounded-xl bg-zinc-100 px-4 py-3 text-center text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          <p className="animate-pulse rounded-xl bg-zinc-100 px-4 py-3 text-center text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
             Your dues payment is going through…
           </p>
         ) : (
@@ -133,7 +133,7 @@ export function DuesCard({
               type="button"
               onClick={payDues}
               disabled={!dues || busy}
-              className="w-full rounded-xl bg-zinc-900 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+              className="w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
             >
               {busy ? "Paying…" : dues ? `Pay ${dues.amount} dues` : "Pay dues"}
             </button>

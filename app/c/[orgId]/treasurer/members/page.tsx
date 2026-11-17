@@ -35,7 +35,7 @@ const shortDate = (iso: string) =>
 const btn = "rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-50";
 const outline = `${btn} border border-zinc-300 dark:border-zinc-700`;
 const danger = `${btn} border border-red-600 bg-red-600 text-white`;
-const primary = `${btn} bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900`;
+const primary = `${btn} bg-brand-50 text-brand-700 hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-200 dark:hover:bg-brand-900`;
 
 // Treasurer → Members: approve join requests, see who's paid dues and how
 // much each person has been reimbursed, add a co-treasurer, remove people.
@@ -159,10 +159,10 @@ export default function MembersPage() {
 
   if (problem === "forbidden") {
     return (
-      <main className="mx-auto w-full max-w-4xl px-4 py-6">
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <p>
           This page is for the club treasurer.{" "}
-          <Link href={`/c/${orgId}`} className="underline">
+          <Link href={`/c/${orgId}`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
             Go home
           </Link>
         </p>
@@ -175,14 +175,14 @@ export default function MembersPage() {
   const treasurerCount = active.filter((p) => p.role === "treasurer").length;
 
   return (
-    <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 px-4 pb-12">
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-12">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <h1 className="text-3xl font-semibold tracking-tight">Members</h1>
         {data && (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             Join code <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{data.joinCode}</span>{" "}
             ·{" "}
-            <Link href={`/c/${orgId}/treasurer/settings`} className="underline">
+            <Link href={`/c/${orgId}/treasurer/settings`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
               Settings
             </Link>
           </p>
@@ -241,7 +241,7 @@ export default function MembersPage() {
                           type="button"
                           disabled={!!busy}
                           onClick={() => act(p, "approve")}
-                          className={`${btn} bg-green-700 text-white`}
+                          className={`${btn} bg-brand-700 text-white`}
                         >
                           {isBusy ? busy.label : "Approve"}
                         </button>
@@ -264,7 +264,7 @@ export default function MembersPage() {
               </p>
             ) : null}
             {active.length > 0 && (
-              <div className="overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
                 <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] gap-3 bg-zinc-50 px-4 py-2 text-sm text-zinc-500 md:grid dark:bg-zinc-900">
                   <span>Name</span>
                   <span>Email</span>
@@ -320,19 +320,19 @@ function MemberRow({
           {p.name}
           {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
         </p>
-        <p className="col-span-2 break-all text-zinc-600 md:col-span-1 dark:text-zinc-400">{p.email ?? "No email"}</p>
+        <p className="col-span-2 truncate text-zinc-600 md:col-span-1 dark:text-zinc-400">{p.email ?? "No email"}</p>
         <p>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               treasurer
-                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                ? "bg-brand-600 hover:bg-brand-700 text-white dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
                 : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
             }`}
           >
             {p.isFounder && treasurer ? "Founder" : treasurer ? "Treasurer" : "Member"}
           </span>
         </p>
-        <p className={p.duesPaidThisPeriod ? "text-green-700 dark:text-green-400" : "text-zinc-600 dark:text-zinc-400"}>
+        <p className={p.duesPaidThisPeriod ? "text-brand-700 dark:text-brand-300" : "text-zinc-600 dark:text-zinc-400"}>
           {p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}
           <span className="text-zinc-500 md:hidden"> · {periodLabel}</span>
         </p>

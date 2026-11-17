@@ -3,11 +3,17 @@
 import Link from "next/link";
 import type { Overview } from "@/lib/dashboard/types";
 
-function Card({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Card({ label, value, sub, attention }: { label: string; value: string; sub?: string; attention?: boolean }) {
   return (
-    <div className="rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-900">
+    <div
+      className={`rounded-2xl border p-4 ${
+        attention
+          ? "border-gold-400 bg-gold-200/60 dark:border-gold-500/60 dark:bg-gold-500/10"
+          : "border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+      }`}
+    >
       <p className="text-sm text-zinc-600 dark:text-zinc-400">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+      <p className="mt-1 font-display text-2xl font-semibold tabular-nums">{value}</p>
       {sub && <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{sub}</p>}
     </div>
   );
@@ -33,15 +39,16 @@ export function OverviewCards({ overview, orgId }: { overview: Overview; orgId: 
         <Card
           label="Waiting for approval"
           value={String(overview.waitingCount)}
+          attention={overview.waitingCount > 0}
           sub={overview.waitingCount === 0 ? "All caught up" : overview.waitingCount === 1 ? "request" : "requests"}
         />
       </div>
 
       {overview.budgets.length > 0 && (
-        <div className="rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mb-3 flex items-baseline justify-between gap-2">
-            <h2 className="font-semibold">Budget by category</h2>
-            <Link href={`/c/${orgId}/treasurer/budget`} className="text-sm text-zinc-600 underline dark:text-zinc-400">
+            <h2 className="text-lg font-semibold">Budget by category</h2>
+            <Link href={`/c/${orgId}/treasurer/budget`} className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300">
               Edit budgets
             </Link>
           </div>
@@ -64,7 +71,7 @@ export function OverviewCards({ overview, orgId }: { overview: Overview; orgId: 
                 >
                   <div
                     className={`h-full rounded-full ${
-                      b.over ? "bg-red-600" : (b.percent ?? 0) >= 80 ? "bg-amber-500" : "bg-green-600"
+                      b.over ? "bg-red-600" : (b.percent ?? 0) >= 80 ? "bg-amber-500" : "bg-brand-600"
                     }`}
                     style={{ width: `${b.percent ?? 0}%` }}
                   />
