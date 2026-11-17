@@ -40,10 +40,11 @@ const ERRORS: Record<string, string> = {
 const errorText = (code: string | undefined) => (code && ERRORS[code]) || "That didn't work. Try again.";
 
 const inputClass =
-  "rounded-xl border border-zinc-300 bg-white px-3 py-2 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-950 dark:focus:border-brand-400";
+  "min-h-11 rounded-[12px] border-[0.5px] border-black/10 bg-white/80 px-3 text-[15px] outline-none focus:border-ink focus:ring-2 focus:ring-black/10";
 const primaryButton =
-  "rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-2 font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950";
-const secondaryButton = "rounded-xl border border-zinc-300 px-4 py-2 font-medium disabled:opacity-50 dark:border-zinc-700";
+  "inline-flex min-h-11 items-center justify-center rounded-[12px] bg-ink px-4 text-[15px] font-semibold text-white hover:bg-zinc-800 disabled:opacity-40";
+const secondaryButton =
+  "glass inline-flex min-h-11 items-center justify-center rounded-[12px] px-4 text-[15px] font-semibold text-ink hover:bg-white/80 disabled:opacity-40";
 
 export default function BudgetPage() {
   const { orgId, isTreasurer } = useOrg();
@@ -100,18 +101,18 @@ export default function BudgetPage() {
       {!isTreasurer || problem === "forbidden" ? (
         <p>This page is for the club treasurer.</p>
       ) : !categories ? (
-        <p className="text-zinc-600 dark:text-zinc-400">
+        <p className="text-muted">
           {problem === "failed" ? "We couldn't load the budget. Refresh to try again." : "Loading…"}
         </p>
       ) : (
         <>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-[13px] text-muted">
             Small receipts are paid instantly only while their category has budget left. A receipt that would go
             over budget goes to you instead. A category with a $0.00 budget sends everything in it to you.
           </p>
 
           {notice && (
-            <p role="status" className="rounded-xl bg-zinc-100 px-4 py-3 text-sm dark:bg-zinc-900">
+            <p role="status" className="glass rounded-[12px] px-4 py-3 text-[13px]">
               {notice}
             </p>
           )}
@@ -144,8 +145,8 @@ export default function BudgetPage() {
 
           {archived.length > 0 && (
             <section className="flex flex-col gap-2">
-              <h2 className="text-lg font-semibold">Archived</h2>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <h2 className="text-[17px] font-semibold">Archived</h2>
+              <p className="text-[13px] text-muted">
                 Members can&apos;t choose these any more. Past requests keep them. Adding a category with the same
                 name brings it back.
               </p>
@@ -153,7 +154,7 @@ export default function BudgetPage() {
                 {archived.map((c) => (
                   <li
                     key={c.id}
-                    className="rounded-full border border-zinc-300 px-3 py-1 text-sm text-zinc-600 dark:border-zinc-700 dark:text-zinc-400"
+                    className="rounded-full bg-black/[0.06] px-3 py-1 text-[13px] text-zinc-600"
                   >
                     {c.name}
                   </li>
@@ -227,14 +228,14 @@ function CategoryCard({
 
   const over = c.overCents > 0;
   return (
-    <li className="flex flex-col gap-3 rounded-2xl bg-zinc-100 p-4 dark:bg-zinc-900">
+    <li className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:p-5">
       {editing ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
+          <label className="flex flex-1 flex-col gap-1 text-[13px] font-medium">
             Name
             <input className={inputClass} value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
           </label>
-          <label className="flex flex-col gap-1 text-sm sm:w-36">
+          <label className="flex flex-col gap-1 text-[13px] font-medium sm:w-36">
             Budget ($)
             <input
               className={inputClass}
@@ -243,7 +244,7 @@ function CategoryCard({
               onChange={(e) => setAmount(e.target.value)}
             />
           </label>
-          <label className="flex flex-col gap-1 text-sm sm:w-36">
+          <label className="flex flex-col gap-1 text-[13px] font-medium sm:w-36">
             Resets
             <select className={inputClass} value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
               <option value="month">Every month</option>
@@ -262,8 +263,8 @@ function CategoryCard({
       ) : (
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <p className="text-lg font-semibold">{c.name}</p>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-[17px] font-semibold">{c.name}</p>
+            <p className="text-[13px] text-muted">
               {c.alwaysReviewed
                 ? "Always reviewed by you. Never paid instantly."
                 : `${formatCents(c.budgetCents)} ${perPeriod(c.period)}`}
@@ -278,7 +279,7 @@ function CategoryCard({
                 type="button"
                 className={
                   confirmArchive
-                    ? "rounded-xl bg-red-600 px-4 py-2 font-medium text-white disabled:opacity-50"
+                    ? "inline-flex min-h-11 items-center justify-center rounded-[12px] bg-alert px-4 text-[15px] font-semibold text-white disabled:opacity-40"
                     : secondaryButton
                 }
                 disabled={busy}
@@ -294,7 +295,7 @@ function CategoryCard({
       {!c.alwaysReviewed && (
         <>
           <div
-            className="h-2 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800"
+            className="h-2 w-full overflow-hidden rounded-full bg-black/[0.08]"
             role="progressbar"
             aria-valuenow={c.percentUsed}
             aria-valuemin={0}
@@ -302,27 +303,27 @@ function CategoryCard({
             aria-label={`${c.name} budget used`}
           >
             <div
-              className={`h-full rounded-full ${over || c.percentUsed >= 100 ? "bg-red-500" : c.percentUsed >= 80 ? "bg-amber-500" : "bg-brand-600"}`}
+              className={`h-full rounded-full ${over || c.percentUsed >= 100 ? "bg-alert" : "bg-ink"}`}
               style={{ width: `${c.percentUsed}%` }}
             />
           </div>
-          <p className="text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+          <p className="text-[13px] tabular-nums text-zinc-700">
             {formatCents(c.spentCents)} spent this {c.period} ·{" "}
             {over ? (
-              <span className="font-medium text-red-600 dark:text-red-400">{formatCents(c.overCents)} over</span>
+              <span className="font-medium text-alert">{formatCents(c.overCents)} over</span>
             ) : (
               `${formatCents(c.remainingCents)} left`
             )}
           </p>
           {c.budgetCents === 0 && (
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <p className="text-[13px] text-warn-text">
               This category has a $0.00 budget, so every receipt in it goes to you.
             </p>
           )}
         </>
       )}
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-[13px] text-alert">{error}</p>}
     </li>
   );
 }
@@ -349,10 +350,10 @@ function AddCategory({ onAdd }: { onAdd: (input: { name: string; budgetCents: nu
   }
 
   return (
-    <form onSubmit={add} className="flex flex-col gap-3 rounded-2xl border border-dashed border-zinc-300 p-4 dark:border-zinc-700">
-      <h2 className="text-lg font-semibold">Add a category</h2>
+    <form onSubmit={add} className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:p-5">
+      <h2 className="text-[17px] font-semibold">Add a category</h2>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <label className="flex flex-1 flex-col gap-1 text-sm">
+        <label className="flex flex-1 flex-col gap-1 text-[13px] font-medium">
           Name
           <input
             className={inputClass}
@@ -362,7 +363,7 @@ function AddCategory({ onAdd }: { onAdd: (input: { name: string; budgetCents: nu
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm sm:w-36">
+        <label className="flex flex-col gap-1 text-[13px] font-medium sm:w-36">
           Budget ($)
           <input
             className={inputClass}
@@ -372,7 +373,7 @@ function AddCategory({ onAdd }: { onAdd: (input: { name: string; budgetCents: nu
             onChange={(e) => setAmount(e.target.value)}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm sm:w-36">
+        <label className="flex flex-col gap-1 text-[13px] font-medium sm:w-36">
           Resets
           <select className={inputClass} value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
             <option value="month">Every month</option>
@@ -383,7 +384,7 @@ function AddCategory({ onAdd }: { onAdd: (input: { name: string; budgetCents: nu
           {busy ? "Adding…" : "Add"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-[13px] text-alert">{error}</p>}
     </form>
   );
 }
