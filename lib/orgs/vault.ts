@@ -19,7 +19,13 @@ import {
   squadsConnection,
   VAULT_INDEX,
 } from "@/lib/solana/squads";
-import { getTreasuryKeypairForSquads, getTreasurySigner, submit, waitForConfirmation } from "@/lib/solana/treasury";
+import {
+  getChainStatus,
+  getTreasuryKeypairForSquads,
+  getTreasurySigner,
+  submit,
+  waitForConfirmation,
+} from "@/lib/solana/treasury";
 import type { Org } from "./orgs";
 
 // Each club's Squads vault (CLAUDE.md "Squads vault"):
@@ -181,6 +187,8 @@ export async function prepareVaultChange(
 ): Promise<VaultChangeStart> {
   const config = squadsConfigFor(org);
   if (!config) return { status: "not_ready" };
+  // Finish any earlier change first, so the vault's current state is known.
+  await settleVaultChanges(org.id);
   const conn = await squadsConnection();
   const server = getTreasuryKeypairForSquads();
   const member = new PublicKey(treasurer.solanaAddress);
@@ -345,6 +353,41 @@ export async function finishVaultChange(
   await applyVaultChange(org.id, change.kind, change.payload);
   await db().from("org_vault_changes").update({ status: "done" }).eq("id", change.id);
   return "done";
+}
+
+/** A sent change older than this that never showed up on-chain can't land anymore. */
+const VAULT_CHANGE_STALE_MS = 2 * 60 * 1000;
+
+/**
+ * Finish vault changes whose confirmation we stopped waiting for ("sent"):
+ * apply them if they landed on-chain, mark them failed if they never will.
+ * Safe to call any time (e.g. when loading the members or settings page).
+ */
+export async function settleVaultChanges(orgId: string): Promise<void> {
+  const { data, error } = await db()
+    .from("org_vault_changes")
+    .select("id, kind, payload, approval_signature, created_at")
+    .eq("org_id", orgId)
+    .eq("status", "sent");
+  if (error) throw new Error(`vault changes lookup: ${error.message}`);
+  for (const change of data ?? []) {
+    if (!change.approval_signature) continue;
+    const chain = await getChainStatus(change.approval_signature);
+    if (chain === "confirmed") {
+      const { data: claimed } = await db()
+        .from("org_vault_changes")
+        .update({ status: "done" })
+        .eq("id", change.id)
+        .eq("status", "sent")
+        .select("id");
+      if (claimed?.length) await applyVaultChange(orgId, change.kind, change.payload);
+    } else if (
+      chain === "failed" ||
+      (chain === "not_found" && Date.now() - new Date(change.created_at).getTime() > VAULT_CHANGE_STALE_MS)
+    ) {
+      await db().from("org_vault_changes").update({ status: "failed" }).eq("id", change.id).eq("status", "sent");
+    }
+  }
 }
 
 /** Mirror a confirmed on-chain change in the database. */
