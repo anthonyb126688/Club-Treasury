@@ -8,7 +8,7 @@ import { JoinClubView } from "./JoinClubView";
 export default function JoinCodePage() {
   return (
     <OnboardingShell>
-      <Suspense fallback={<p className="text-zinc-600 dark:text-zinc-400">Loading…</p>}>
+      <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <JoinClubView />
       </Suspense>
     </OnboardingShell>

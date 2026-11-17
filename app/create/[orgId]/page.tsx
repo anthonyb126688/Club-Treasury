@@ -8,7 +8,7 @@ import { SetupSteps } from "./SetupSteps";
 export default function ClubSetupPage() {
   return (
     <OnboardingShell>
-      <Suspense fallback={<p className="text-zinc-600 dark:text-zinc-400">Loading…</p>}>
+      <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <SetupSteps />
       </Suspense>
     </OnboardingShell>

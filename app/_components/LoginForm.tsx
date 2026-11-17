@@ -41,9 +41,9 @@ export function LoginForm() {
   }
 
   const input =
-    "w-full rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-base text-zinc-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-brand-400";
+    "w-full min-h-12 rounded-[12px] border-[0.5px] border-black/10 bg-white/80 px-4 text-[16px] text-ink outline-none focus:border-ink focus:ring-2 focus:ring-black/10";
   const button =
-    "w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-base font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950";
+    "inline-flex w-full min-h-12 items-center justify-center rounded-[12px] bg-ink px-4 text-[16px] font-semibold text-white hover:bg-zinc-800 disabled:opacity-40";
 
   return step === "email" ? (
     <form onSubmit={onSendCode} className="flex w-full flex-col gap-3">
@@ -64,7 +64,7 @@ export function LoginForm() {
       <button type="submit" disabled={busy} className={button}>
         {busy ? "Sending…" : "Send code"}
       </button>
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-[13px] font-medium text-alert">{error}</p>}
     </form>
   ) : (
     <form onSubmit={onLogIn} className="flex w-full flex-col gap-3">
@@ -85,7 +85,7 @@ export function LoginForm() {
       <button type="submit" disabled={busy} className={button}>
         {busy ? "Logging in…" : "Log in"}
       </button>
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-[13px] font-medium text-alert">{error}</p>}
       <button
         type="button"
         onClick={() => {
@@ -93,7 +93,7 @@ export function LoginForm() {
           setCode("");
           setError(null);
         }}
-        className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300"
+        className="text-[13px] text-muted underline underline-offset-4 hover:text-ink"
       >
         Use a different email
       </button>

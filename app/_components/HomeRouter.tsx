@@ -33,13 +33,13 @@ export function HomeRouter() {
 
   if (state === "failed") {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-[13px] font-medium text-alert">
         We couldn&apos;t finish setting up your account. Refresh to try again.
       </p>
     );
   }
   if (destination?.to === "name") return <NameForm onSaved={refresh} />;
   return (
-    <p className="text-zinc-600 dark:text-zinc-400">{state === "loading" ? "Setting up your account…" : "Loading…"}</p>
+    <p className="text-muted">{state === "loading" ? "Setting up your account…" : "Loading…"}</p>
   );
 }

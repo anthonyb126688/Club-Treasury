@@ -7,7 +7,7 @@ import { WaitingView } from "./WaitingView";
 export default function WaitingPage() {
   return (
     <OnboardingShell>
-      <Suspense fallback={<p className="text-zinc-600 dark:text-zinc-400">Loading…</p>}>
+      <Suspense fallback={<p className="text-muted">Loading…</p>}>
         <WaitingView />
       </Suspense>
     </OnboardingShell>

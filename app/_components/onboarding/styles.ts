@@ -1,18 +1,19 @@
-// Shared Tailwind classes for the onboarding screens (same look as LoginForm).
+// Shared Tailwind classes for the onboarding screens (same look as LoginForm):
+// black and white frosted glass, like the rest of the app.
 
 export const inputClass =
-  "w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base text-zinc-900 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-brand-400";
+  "w-full min-h-12 rounded-[12px] border-[0.5px] border-black/10 bg-white/80 px-4 text-[16px] text-ink outline-none focus:border-ink focus:ring-2 focus:ring-black/10";
 
 export const primaryButton =
-  "w-full rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 text-center text-base font-medium text-white disabled:opacity-50 dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950";
+  "inline-flex w-full min-h-12 items-center justify-center rounded-[12px] bg-ink px-4 text-center text-[16px] font-semibold text-white hover:bg-zinc-800 disabled:opacity-40";
 
 export const secondaryButton =
-  "w-full rounded-xl border border-zinc-300 px-4 py-3 text-center text-base font-medium text-zinc-900 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-50";
+  "glass inline-flex w-full min-h-12 items-center justify-center rounded-[12px] px-4 text-center text-[16px] font-semibold text-ink hover:bg-white/80 disabled:opacity-40";
 
-export const labelClass = "text-sm text-zinc-600 dark:text-zinc-400";
+export const labelClass = "text-[13px] font-medium text-muted";
 
-export const mutedText = "text-zinc-600 dark:text-zinc-400";
+export const mutedText = "text-muted";
 
-export const errorText = "text-sm text-red-600";
+export const errorText = "text-[13px] font-medium text-alert";
 
-export const card = "rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900";
+export const card = "glass rounded-[16px] p-4 sm:p-5";

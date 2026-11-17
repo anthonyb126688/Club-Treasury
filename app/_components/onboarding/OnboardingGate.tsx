@@ -65,7 +65,7 @@ function LoggedIn({
   const { state, me, refresh } = useMe();
   if (state === "failed") {
     return (
-      <p role="alert" className="text-sm text-red-600">
+      <p role="alert" className="text-[13px] font-medium text-alert">
         We couldn&apos;t finish setting up your account. Refresh to try again.
       </p>
     );
