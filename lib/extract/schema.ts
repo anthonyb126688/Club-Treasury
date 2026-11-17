@@ -5,10 +5,15 @@
 // anyone could have written on. This file makes sure it's the right shape
 // and size. It never decides anything; lib/policy/ does that.
 import { z } from "zod";
-import { CATEGORIES, type Category } from "@/lib/policy/rules";
+import { DEFAULT_CATEGORIES, OTHER_CATEGORY, type Category } from "@/lib/policy/rules";
 
-/** What we ask the AI for (sent to the API as a JSON schema). */
-export const AiReceiptSchema = z.object({
+/**
+ * What we ask the AI for (sent to the API as a JSON schema). The category
+ * must be one of the club's own category slugs (plus "other").
+ */
+export function aiReceiptSchema(categorySlugs: readonly string[]) {
+  const slugs = [...new Set([...categorySlugs, OTHER_CATEGORY])] as [string, ...string[]];
+  return z.object({
   is_receipt: z.boolean().describe("true only if the image is a purchase receipt or invoice"),
   vendor: z.string().nullable().describe("store or business name, as printed"),
   date: z.string().nullable().describe("purchase date as YYYY-MM-DD, or null if not visible"),
@@ -17,15 +22,18 @@ export const AiReceiptSchema = z.object({
     .int()
     .nullable()
     .describe("final amount paid, in cents (e.g. $18.40 → 1840), or null if not visible"),
-  category: z.enum(CATEGORIES).describe("best fit for a student club expense"),
+  category: z.enum(slugs).describe("best fit among the club's categories"),
   line_items: z
     .array(z.object({ description: z.string(), amount_cents: z.number().int() }))
     .describe("items as printed; empty if unreadable"),
   summary: z
     .string()
     .describe("one plain sentence describing the purchase, e.g. 'Two pizzas from Domino's on Nov 14.'"),
-});
-export type AiReceipt = z.infer<typeof AiReceiptSchema>;
+  });
+}
+
+/** Category slugs of the default club, for tests and scripts. */
+export const DEFAULT_CATEGORY_SLUGS = DEFAULT_CATEGORIES.map((c) => c.slug);
 
 /** A checked receipt reading, safe to store and show (as plain text). */
 export type ReceiptReading = {
@@ -71,8 +79,11 @@ function cleanCents(cents: number | null): number | null {
  * Validate whatever came back from the AI. Throws if the shape is wrong;
  * otherwise returns a cleaned, size-limited reading.
  */
-export function validateReading(raw: unknown): ReceiptReading {
-  const ai = AiReceiptSchema.parse(raw);
+export function validateReading(
+  raw: unknown,
+  categorySlugs: readonly string[] = DEFAULT_CATEGORY_SLUGS,
+): ReceiptReading {
+  const ai = aiReceiptSchema(categorySlugs).parse(raw);
   const vendor = ai.vendor ? cleanText(ai.vendor, LIMITS.vendor) : "";
   return {
     isReceipt: ai.is_receipt,

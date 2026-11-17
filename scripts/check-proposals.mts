@@ -12,24 +12,42 @@ const { VersionedTransaction } = await import("@solana/web3.js");
 const { db } = await import("@/lib/db");
 const { formatCents } = await import("@/lib/money");
 const { ensureProposal } = await import("@/lib/reimburse/server");
-const { prepareProposalApproval, squadsConfig, squadsConnection } = await import("@/lib/solana/squads");
+const { prepareProposalApproval, squadsConfigFor, squadsConnection } = await import("@/lib/solana/squads");
+// Which club: --club=<id> (defaults to the demo club).
+const { DEFAULT_ORG_ID, loadOrg } = await import("@/lib/orgs/orgs");
+const clubArg = process.argv.find((a) => a.startsWith("--club="))?.slice("--club=".length);
+const club = await loadOrg(clubArg ?? DEFAULT_ORG_ID);
+if (!club) {
+  console.error(`No club with id ${clubArg}.`);
+  process.exit(1);
+}
 
-const config = squadsConfig();
+
+const config = squadsConfigFor(club);
 if (!config) {
-  console.error("Squads isn't set up: add the SQUADS_* addresses to .env.local.");
+  console.error("This club's vault isn't set up yet.");
   process.exit(1);
 }
 const conn = await squadsConnection();
 
-const { data: treasurer } = await db().from("members").select("solana_address").eq("role", "treasurer").single();
+const { data: treasurerRow } = await db()
+  .from("org_memberships")
+  .select("member:members(solana_address)")
+  .eq("org_id", club.id)
+  .eq("role", "treasurer")
+  .eq("status", "active")
+  .limit(1)
+  .single();
+const treasurer = (treasurerRow as unknown as { member: { solana_address: string } }).member;
 const { data: rows } = await db()
   .from("reimbursement_requests")
   .select("id, total_cents, vendor")
+  .eq("org_id", club.id)
   .eq("status", "queued")
   .order("created_at");
 
 for (const row of rows ?? []) {
-  const index = await ensureProposal(row.id);
+  const index = await ensureProposal(club.id, row.id);
   console.log(`\n${row.vendor} ${formatCents(row.total_cents)} → proposal #${index}`);
   if (index === null) continue;
 

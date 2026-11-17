@@ -5,7 +5,7 @@ import {
   type Claim,
   type PolicyContext,
 } from "@/lib/policy/decide";
-import { DEFAULT_RULES } from "@/lib/policy/rules";
+import { DEFAULT_CATEGORIES, DEFAULT_RULES, DEFAULT_SETTINGS, rulesFrom } from "@/lib/policy/rules";
 
 // The demo's $18 pizza receipt, submitted on a quiet day.
 const pizza: Claim = {
@@ -17,7 +17,7 @@ const pizza: Claim = {
 
 const quietDay: PolicyContext = {
   today: "2026-11-16",
-  categorySpentThisMonthCents: 0,
+  categorySpentThisPeriodCents: 0,
   clubAutoApprovedTodayCents: 0,
   duplicate: null,
   memberEdited: { amount: false, category: false },
@@ -54,7 +54,7 @@ describe("sends to the treasurer", () => {
   });
 
   it("a small receipt that would push the category over budget", () => {
-    const result = decide({}, { categorySpentThisMonthCents: 19_000 });
+    const result = decide({}, { categorySpentThisPeriodCents: 19_000 });
     expect(result.reasons).toEqual([
       {
         code: "over_budget",
@@ -64,7 +64,7 @@ describe("sends to the treasurer", () => {
   });
 
   it("landing exactly on the budget is fine", () => {
-    expect(decide({}, { categorySpentThisMonthCents: 18_200 }).decision).toBe("auto_approve");
+    expect(decide({}, { categorySpentThisPeriodCents: 18_200 }).decision).toBe("auto_approve");
   });
 
   it("the club's daily auto-approve limit", () => {
@@ -132,7 +132,7 @@ describe("sends to the treasurer", () => {
         {
           duplicate: "same_details",
           memberEdited: { amount: true, category: false },
-          categorySpentThisMonthCents: 15_000,
+          categorySpentThisPeriodCents: 15_000,
         },
       ),
     ).toEqual(["possible_duplicate", "edited_by_member", "over_cap", "over_budget"]);
@@ -164,5 +164,45 @@ describe("formatCents", () => {
   it("formats zero and thousands", () => {
     expect(formatCents(0)).toBe("$0.00");
     expect(formatCents(123_456)).toBe("$1,234.56");
+  });
+});
+
+describe("each club has its own rules", () => {
+  const strictClub = rulesFrom(
+    { autoApproveCapCents: 2_000, dailyAutoApproveLimitCents: 15_000, maxReceiptAgeDays: 60 },
+    DEFAULT_CATEGORIES,
+  );
+
+  it("the same $40 receipt is paid instantly in a $50-cap club but goes to the treasurer in a $20-cap club", () => {
+    const claim = { ...pizza, totalCents: 4_000 };
+    expect(decideReimbursement(claim, DEFAULT_RULES, quietDay).decision).toBe("auto_approve");
+    const strict = decideReimbursement(claim, strictClub, quietDay);
+    expect(strict.decision).toBe("needs_review");
+    expect(strict.reasons[0].message).toBe("$40.00 is over the $20.00 limit for automatic payouts.");
+  });
+
+  it("uses the club's own categories", () => {
+    const robotics = rulesFrom(DEFAULT_SETTINGS, [
+      { slug: "robot-parts", name: "Robot parts", budgetCents: 30_000, period: "semester" },
+    ]);
+    const parts = { ...pizza, category: "robot-parts" };
+    expect(decideReimbursement(parts, robotics, quietDay).decision).toBe("auto_approve");
+    // "food" isn't one of this club's categories.
+    expect(decideReimbursement(pizza, robotics, quietDay).reasons.map((r) => r.message)).toEqual([
+      "That category isn't in the club's budget.",
+    ]);
+  });
+
+  it("names the budget period in the reason", () => {
+    const semester = rulesFrom(DEFAULT_SETTINGS, [
+      { slug: "food", name: "Food", budgetCents: 10_000, period: "semester" },
+    ]);
+    const result = decideReimbursement(pizza, semester, { ...quietDay, categorySpentThisPeriodCents: 9_000 });
+    expect(result.reasons[0].message).toBe("This would put Food $8.00 over its $100.00 semester budget.");
+  });
+
+  it("a category with no budget yet goes to the treasurer", () => {
+    const empty = rulesFrom(DEFAULT_SETTINGS, [{ slug: "food", name: "Food", budgetCents: 0, period: "month" }]);
+    expect(decideReimbursement(pizza, empty, quietDay).reasons[0].message).toBe("Food has no budget set yet.");
   });
 });

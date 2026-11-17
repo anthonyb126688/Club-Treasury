@@ -83,7 +83,7 @@ describe("prompt injection receipt (demo step 5)", () => {
     const { claim, memberEdited } = buildClaim(ai, { totalCents: 500_000, category: "events" });
     const result = decideReimbursement(claim, DEFAULT_RULES, {
       today: "2026-11-16",
-      categorySpentThisMonthCents: 0,
+      categorySpentThisPeriodCents: 0,
       clubAutoApprovedTodayCents: 0,
       duplicate: null,
       memberEdited,

@@ -1,4 +1,3 @@
-import { db } from "@/lib/db";
 import { formatUsd } from "@/lib/money";
 import { getDollarBalance } from "@/lib/solana/balance";
 import { getMember, verifyAccessToken } from "@/lib/wallets/privy-server";
@@ -18,19 +17,11 @@ export async function GET(request: Request) {
       // Account is still being set up right after first login.
       return Response.json({ email: member.email, balance: null, ready: false });
     }
-    const [units, role] = await Promise.all([
-      getDollarBalance(member.solanaAddress),
-      db()
-        .from("members")
-        .select("role")
-        .eq("privy_user_id", userId)
-        .maybeSingle<{ role: string }>(),
-    ]);
+    const units = await getDollarBalance(member.solanaAddress);
     return Response.json({
       email: member.email,
       balance: formatUsd(units),
       ready: true,
-      isTreasurer: role.data?.role === "treasurer",
     });
   } catch (err) {
     // Log only the message: never the token, keys, or RPC URL.

@@ -10,7 +10,7 @@
 // Nothing is ever rejected here. Anything that fails a rule goes to the
 // treasurer with every reason listed in plain English.
 import { formatCents } from "@/lib/money";
-import { CATEGORY_LABELS, type Category, type PolicyRules } from "./rules";
+import { OTHER_CATEGORY, type Category, type PolicyRules } from "./rules";
 
 /** What the member confirmed (possibly after editing what the AI read). */
 export type Claim = {
@@ -23,7 +23,7 @@ export type Claim = {
 /** Facts the server looked up before deciding. */
 export type PolicyContext = {
   today: string; // YYYY-MM-DD
-  categorySpentThisMonthCents: number; // already approved/paid in this category this month
+  categorySpentThisPeriodCents: number; // already approved/paid in this category this budget period
   clubAutoApprovedTodayCents: number; // already auto-approved club-wide today
   duplicate: "same_photo" | "same_details" | null;
   memberEdited: { amount: boolean; category: boolean };
@@ -102,25 +102,24 @@ export function decideReimbursement(
   }
 
   const category = claim.category;
-  const allowed = category !== null && rules.allowedCategories.includes(category);
-  if (!allowed) {
-    add(
-      "category_not_allowed",
-      category
-        ? `"${CATEGORY_LABELS[category]}" isn't a category the club reimburses automatically.`
-        : "No category was chosen.",
-    );
+  const rule = category ? rules.categories[category] : undefined;
+  if (!category) {
+    add("category_not_allowed", "No category was chosen.");
+  } else if (!rule) {
+    add("category_not_allowed", "That category isn't in the club's budget.");
+  } else if (category === OTHER_CATEGORY) {
+    add("category_not_allowed", `"${rule.name}" isn't a category the club reimburses automatically.`);
   }
 
-  if (validTotal && allowed) {
-    const budget = rules.monthlyBudgetCents[category];
-    if (budget === undefined) {
-      add("over_budget", `${CATEGORY_LABELS[category]} has no monthly budget set.`);
-    } else if (ctx.categorySpentThisMonthCents + total > budget) {
-      const over = ctx.categorySpentThisMonthCents + total - budget;
+  if (validTotal && rule && category !== OTHER_CATEGORY) {
+    const periodWord = rule.period === "month" ? "monthly" : "semester";
+    if (rule.budgetCents <= 0) {
+      add("over_budget", `${rule.name} has no budget set yet.`);
+    } else if (ctx.categorySpentThisPeriodCents + total > rule.budgetCents) {
+      const over = ctx.categorySpentThisPeriodCents + total - rule.budgetCents;
       add(
         "over_budget",
-        `This would put ${CATEGORY_LABELS[category]} ${formatCents(over)} over its ${formatCents(budget)} monthly budget.`,
+        `This would put ${rule.name} ${formatCents(over)} over its ${formatCents(rule.budgetCents)} ${periodWord} budget.`,
       );
     }
   }

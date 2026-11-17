@@ -8,7 +8,7 @@ const { readFileSync } = await import("node:fs");
 const { readReceipt } = await import("@/lib/extract/read");
 const { buildClaim } = await import("@/lib/extract/claim");
 const { decideReimbursement } = await import("@/lib/policy/decide");
-const { DEFAULT_RULES } = await import("@/lib/policy/rules");
+const { DEFAULT_CATEGORIES, DEFAULT_RULES } = await import("@/lib/policy/rules");
 
 const path = process.argv[2];
 if (!path) {
@@ -21,7 +21,7 @@ const mediaType = lower.endsWith(".png") ? "image/png" : lower.endsWith(".webp")
 const today = new Date().toISOString().slice(0, 10);
 
 const started = Date.now();
-const reading = await readReceipt({ base64: readFileSync(path).toString("base64"), mediaType }, today);
+const reading = await readReceipt({ base64: readFileSync(path).toString("base64"), mediaType }, today, DEFAULT_CATEGORIES);
 console.log(`Read in ${((Date.now() - started) / 1000).toFixed(1)}s:`);
 console.log(JSON.stringify(reading, null, 2));
 
@@ -32,7 +32,7 @@ if (reading.totalCents !== null) {
   });
   const result = decideReimbursement(claim, DEFAULT_RULES, {
     today,
-    categorySpentThisMonthCents: 0,
+    categorySpentThisPeriodCents: 0,
     clubAutoApprovedTodayCents: 0,
     duplicate: null,
     memberEdited,

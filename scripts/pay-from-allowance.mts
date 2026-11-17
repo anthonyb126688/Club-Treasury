@@ -9,19 +9,35 @@ const { db } = await import("@/lib/db");
 const { formatUsd } = await import("@/lib/money");
 const { getDollarBalance } = await import("@/lib/solana/balance");
 const { explorerTxUrl } = await import("@/lib/solana/memo");
-const { allowanceLeft, allowancePaymentInstructions, squadsConfig } = await import("@/lib/solana/squads");
-const { signWithTreasury, submit, waitForConfirmation } = await import("@/lib/solana/treasury");
-
-const config = squadsConfig();
-if (!config) {
-  console.error("Squads isn't set up: add the SQUADS_* addresses to .env.local.");
+const { allowanceLeft, allowancePaymentInstructions, squadsConfigFor } = await import("@/lib/solana/squads");
+// Which club: --club=<id> (defaults to the demo club).
+const { DEFAULT_ORG_ID, loadOrg } = await import("@/lib/orgs/orgs");
+const clubArg = process.argv.find((a) => a.startsWith("--club="))?.slice("--club=".length);
+const club = await loadOrg(clubArg ?? DEFAULT_ORG_ID);
+if (!club) {
+  console.error(`No club with id ${clubArg}.`);
   process.exit(1);
 }
 
-let to = process.argv[2];
+const { signWithTreasury, submit, waitForConfirmation } = await import("@/lib/solana/treasury");
+
+const config = squadsConfigFor(club);
+if (!config) {
+  console.error("This club's vault isn't set up yet.");
+  process.exit(1);
+}
+
+let to = process.argv.slice(2).find((a) => !a.startsWith("--"));
 if (!to) {
-  const { data } = await db().from("members").select("solana_address").eq("role", "treasurer").single();
-  to = data!.solana_address as string;
+  const { data } = await db()
+  .from("org_memberships")
+  .select("member:members(solana_address)")
+  .eq("org_id", club.id)
+  .eq("role", "treasurer")
+  .eq("status", "active")
+  .limit(1)
+  .single();
+  to = (data as unknown as { member: { solana_address: string } }).member.solana_address;
 }
 if (!isAddress(to)) {
   console.error("Usage: npm run pay-from-allowance -- <address>");

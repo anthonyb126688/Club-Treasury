@@ -97,22 +97,27 @@ export async function sendDollars(
 }
 
 /**
- * Add new test dollars to the club treasury (e.g. starting funds or a
- * sponsor). Only possible because the treasury issues our test-dollar token;
- * with real USDC this would be an incoming transfer instead.
+ * Add new test dollars to a club's vault (or, by default, the treasury), e.g.
+ * starting funds or a sponsor. Only possible because the treasury issues our
+ * test-dollar token; with real USDC this would be an incoming transfer.
  */
-export async function depositToTreasury(amountCents: number, memo: string): Promise<SendResult> {
+export async function depositToTreasury(
+  amountCents: number,
+  memo: string,
+  owner?: string,
+): Promise<SendResult> {
   const amount = centsToUnits(amountCents);
   validateMemo(memo);
   const treasury = await getTreasurySigner();
   const mint = getDollarMint();
-  const treasuryAccount = await tokenAccountOf(treasury.address);
+  const holder = owner ?? treasury.address;
+  const treasuryAccount = await tokenAccountOf(holder);
 
   const payment = await signWithTreasury([
     getCreateAssociatedTokenIdempotentInstruction({
       payer: treasury,
       ata: treasuryAccount,
-      owner: treasury.address,
+      owner: address(holder),
       mint,
     }),
     getMintToCheckedInstruction({

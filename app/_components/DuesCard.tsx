@@ -9,7 +9,7 @@ type DuesStatus = {
   term: string;
   amount: string;
   status: "unpaid" | "pending" | "paid";
-  clubBalance: string;
+  clubBalance: string | null;
 };
 
 const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
@@ -18,7 +18,7 @@ const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 // Club balance + the one-tap "Pay dues" button.
 // The member's account approves the payment silently (no pop-up); the club
 // pays the network fee. The server makes sure dues are charged once per term.
-export function DuesCard({ onPaid }: { onPaid: () => void }) {
+export function DuesCard({ orgId, onPaid }: { orgId: string; onPaid: () => void }) {
   const { getAccessToken } = usePrivy();
   const account = useMemberAccount();
   const { signTransaction } = useSignTransaction();
@@ -32,9 +32,9 @@ export function DuesCard({ onPaid }: { onPaid: () => void }) {
   );
 
   const refresh = useCallback(async () => {
-    const res = await fetch("/api/dues", { headers: await authHeader() });
+    const res = await fetch(`/api/orgs/${orgId}/dues`, { headers: await authHeader() });
     if (res.ok) setDues((await res.json()) as DuesStatus);
-  }, [authHeader]);
+  }, [authHeader, orgId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
@@ -52,7 +52,11 @@ export function DuesCard({ onPaid }: { onPaid: () => void }) {
     setBusy(true);
     setMessage(null);
     try {
-      const prep = await fetch("/api/dues/prepare", { method: "POST", headers: await authHeader() });
+      const prep = await fetch(`/api/orgs/${orgId}/dues/prepare`, { method: "POST", headers: await authHeader() });
+      if (prep.status === 409) {
+        setMessage("The club is still being set up. Try again in a minute.");
+        return;
+      }
       if (prep.status === 402) {
         setMessage("You don't have enough money to pay dues.");
         return;
@@ -72,7 +76,7 @@ export function DuesCard({ onPaid }: { onPaid: () => void }) {
         chain: "solana:devnet",
       });
 
-      const sub = await fetch("/api/dues/submit", {
+      const sub = await fetch(`/api/orgs/${orgId}/dues/submit`, {
         method: "POST",
         headers: { ...(await authHeader()), "Content-Type": "application/json" },
         body: JSON.stringify({ transaction: toBase64(signedTransaction) }),

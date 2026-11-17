@@ -48,31 +48,44 @@ export const VAULT_INDEX = 0;
 
 export type SquadsConfig = { multisig: PublicKey; vault: PublicKey; spendingLimit: PublicKey };
 
-/** Squads addresses from env, or null if the app isn't using the vault yet. */
-export function squadsConfig(): SquadsConfig | null {
-  const ms = process.env.SQUADS_MULTISIG_ADDRESS;
-  const vault = process.env.SQUADS_VAULT_ADDRESS;
-  const limit = process.env.SQUADS_SPENDING_LIMIT_ADDRESS;
+/** The vault addresses stored on a club's row (lib/orgs). */
+export type VaultAddresses = {
+  squads_multisig_address: string | null;
+  squads_vault_address: string | null;
+  squads_spending_limit_address: string | null;
+};
+
+/** A club's Squads addresses, or null if its vault isn't set up yet. */
+export function squadsConfigFor(org: VaultAddresses): SquadsConfig | null {
+  const ms = org.squads_multisig_address;
+  const vault = org.squads_vault_address;
+  const limit = org.squads_spending_limit_address;
   if (!ms || !vault || !limit) return null;
   const config = {
     multisig: new PublicKey(ms),
     vault: new PublicKey(vault),
     spendingLimit: new PublicKey(limit),
   };
-  // Guard against a mixed-up paste: money sent to the multisig address
+  // Guard against a mixed-up address: money sent to the multisig address
   // itself can be lost, so the vault must be the one Squads derives.
   const [expected] = multisig.getVaultPda({ multisigPda: config.multisig, index: VAULT_INDEX });
   if (!expected.equals(config.vault)) {
-    throw new Error("SQUADS_VAULT_ADDRESS doesn't match SQUADS_MULTISIG_ADDRESS (vault 0)");
+    throw new Error("Vault address doesn't match the club's multisig (vault 0)");
   }
   return config;
 }
 
-/** Where the club's money lives: the Squads vault if set up, else the old treasury. */
-export async function clubHolderAddress(): Promise<string> {
-  const config = squadsConfig();
-  if (config) return config.vault.toBase58();
-  return (await getTreasurySigner()).address;
+export class ClubNotReadyError extends Error {
+  constructor() {
+    super("This club's vault isn't set up yet");
+  }
+}
+
+/** Where a club's money lives: its Squads vault. */
+export function clubHolderAddress(org: VaultAddresses): string {
+  const config = squadsConfigFor(org);
+  if (!config) throw new ClubNotReadyError();
+  return config.vault.toBase58();
 }
 
 let connection: Connection | null = null;
@@ -338,6 +351,11 @@ export async function prepareProposalApproval(
   const kind = proposal.status.__kind;
   if (kind === "Executed") return { status: "executed" };
   if (kind !== "Active" && kind !== "Approved") return { status: "unavailable" };
+
+  // Adding/removing an approver cancels every older open proposal on-chain
+  // ("stale"). Treat those as gone so the caller opens a fresh one.
+  const ms = await multisig.accounts.Multisig.fromAccountAddress(conn, config.multisig);
+  if (transactionIndex <= BigInt(ms.staleTransactionIndex.toString())) return { status: "unavailable" };
 
   const ixs: TransactionInstruction[] = [];
   if (kind === "Active") {

@@ -1,8 +1,8 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
+import { HomeRouter } from "./_components/HomeRouter";
 import { LoginForm } from "./_components/LoginForm";
-import { MemberHome } from "./_components/MemberHome";
 
 export default function Home() {
   const { ready, authenticated } = usePrivy();
@@ -13,7 +13,7 @@ export default function Home() {
       {!ready ? (
         <p className="text-zinc-600 dark:text-zinc-400">Loading…</p>
       ) : authenticated ? (
-        <MemberHome />
+        <HomeRouter />
       ) : (
         <LoginForm />
       )}

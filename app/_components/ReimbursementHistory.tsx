@@ -9,6 +9,7 @@ type Item = {
   amount: string | null;
   status: "paying" | "reimbursed" | "pending" | "not_approved" | "delayed";
   date: string;
+  note: string | null; // the treasurer's note, when denied
 };
 
 const LABEL: Record<Item["status"], { text: string; className: string }> = {
@@ -21,7 +22,7 @@ const LABEL: Record<Item["status"], { text: string; className: string }> = {
 
 // "My reimbursements" on the home screen. Refreshes while anything is
 // still pending or on its way.
-export function ReimbursementHistory({ onChange }: { onChange?: () => void }) {
+export function ReimbursementHistory({ orgId, onChange }: { orgId: string; onChange?: () => void }) {
   const { getAccessToken } = usePrivy();
   const [items, setItems] = useState<Item[] | null>(null);
 
@@ -32,7 +33,7 @@ export function ReimbursementHistory({ onChange }: { onChange?: () => void }) {
 
     async function load() {
       try {
-        const res = await fetch("/api/reimburse", {
+        const res = await fetch(`/api/orgs/${orgId}/reimburse`, {
           headers: { Authorization: `Bearer ${await getAccessToken()}` },
         });
         if (res.ok && !cancelled) {
@@ -54,7 +55,7 @@ export function ReimbursementHistory({ onChange }: { onChange?: () => void }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [getAccessToken, onChange]);
+  }, [getAccessToken, onChange, orgId]);
 
   if (!items || items.length === 0) return null;
 
@@ -69,6 +70,7 @@ export function ReimbursementHistory({ onChange }: { onChange?: () => void }) {
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
                 {new Date(r.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </p>
+              {r.note && <p className="text-sm text-zinc-600 dark:text-zinc-400">Treasurer: {r.note}</p>}
             </div>
             <div className="shrink-0 text-right">
               <p className="font-semibold tabular-nums">{r.amount ?? "—"}</p>

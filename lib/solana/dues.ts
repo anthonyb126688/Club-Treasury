@@ -24,14 +24,12 @@ import { getDollarBalance } from "./balance";
 import { validateMemo } from "./memo";
 import { DOLLAR_DECIMALS, getDollarMint } from "./mint";
 import { getDevnetRpc } from "./rpc";
-import { clubHolderAddress } from "./squads";
 import { getTreasurySigner, type SignedPayment } from "./treasury";
 
 export class NotEnoughMoneyError extends Error {}
 
 /**
- * Build a dues payment from the member to the club (the Squads vault once
- * it's set up, otherwise the old treasury wallet).
+ * Build a dues payment from the member to their club's vault (`clubAddress`).
  *
  * The treasury signs now as FEE PAYER only (members never need SOL). The
  * member still has to approve it in the browser. Because the treasury's
@@ -42,6 +40,7 @@ export class NotEnoughMoneyError extends Error {}
  * and the partly-signed payment as base64.
  */
 export async function prepareDuesPayment(
+  clubAddress: string,
   memberAddress: string,
   amountCents: number,
   memo: string,
@@ -60,7 +59,7 @@ export async function prepareDuesPayment(
   const [[from], [to]] = await Promise.all([
     findAssociatedTokenPda({ owner: member.address, mint, tokenProgram: TOKEN_PROGRAM_ADDRESS }),
     findAssociatedTokenPda({
-      owner: address(await clubHolderAddress()),
+      owner: address(clubAddress),
       mint,
       tokenProgram: TOKEN_PROGRAM_ADDRESS,
     }),

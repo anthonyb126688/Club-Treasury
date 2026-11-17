@@ -1,8 +1,10 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { currentPeriod } from "@/lib/dues/period";
 import { centsToUnits } from "@/lib/money";
+import type { Org } from "@/lib/orgs/orgs";
 import type { PolicyContext, ReviewReason } from "@/lib/policy/decide";
-import { CATEGORY_LABELS, DEFAULT_RULES, type Category, type PolicyRules } from "@/lib/policy/rules";
+import type { CategoryRule } from "@/lib/policy/rules";
 import { isSpendingLimitExceeded } from "@/lib/solana/allowance";
 import { checkApprovedPayment } from "@/lib/solana/dues";
 import {
@@ -11,86 +13,55 @@ import {
   createPaymentProposal,
   isVaultApprover,
   prepareProposalApproval,
-  squadsConfig,
+  squadsConfigFor,
 } from "@/lib/solana/squads";
 import { getChainStatus, signWithTreasury, submit, waitForConfirmation } from "@/lib/solana/treasury";
-import { signDollarTransfer } from "@/lib/solana/transfer";
-import { verifyAccessToken } from "@/lib/wallets/privy-server";
 import { decidePayout, decideProposalPayout, type PayoutRow, type RequestStatus } from "./decide";
 
+// Reimbursement payouts and lookups for ONE club at a time. Every function
+// takes the club (or its id) and every query filters by org_id.
+
 export const RECEIPT_BUCKET = "receipts";
-
-export type CurrentMember = {
-  userId: string;
-  email: string | null;
-  solanaAddress: string;
-  role: "member" | "treasurer";
-};
-
-/**
- * Who's making this request, from their Privy login. Null if not logged in,
- * or not set up yet (the members row is created by the welcome step).
- */
-export async function currentMember(request: Request): Promise<CurrentMember | null> {
-  const token = request.headers.get("authorization")?.replace(/^Bearer /, "");
-  const userId = token ? await verifyAccessToken(token) : null;
-  if (!userId) return null;
-  const { data, error } = await db()
-    .from("members")
-    .select("email, solana_address, role")
-    .eq("privy_user_id", userId)
-    .maybeSingle<{ email: string | null; solana_address: string; role: "member" | "treasurer" }>();
-  if (error) throw new Error(`member lookup: ${error.message}`);
-  if (!data) return null;
-  return { userId, email: data.email, solanaAddress: data.solana_address, role: data.role };
-}
 
 /** Today's date (UTC) as YYYY-MM-DD. */
 export function todayUtc(now = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
 
-/** Policy rules, with monthly budgets from the category_budgets table. */
-export async function loadRules(): Promise<PolicyRules> {
-  const { data, error } = await db()
-    .from("category_budgets")
-    .select("category, monthly_limit_cents");
-  if (error) throw new Error(`budgets lookup: ${error.message}`);
-  const budgets = { ...DEFAULT_RULES.monthlyBudgetCents };
-  for (const row of (data ?? []) as { category: Category; monthly_limit_cents: number }[]) {
-    budgets[row.category] = row.monthly_limit_cents;
-  }
-  return { ...DEFAULT_RULES, monthlyBudgetCents: budgets };
-}
-
 const sum = (rows: { total_cents: number | null }[] | null) =>
   (rows ?? []).reduce((total, r) => total + (r.total_cents ?? 0), 0);
 
-/** The facts the policy needs about everything else that's been submitted. */
+/** The facts the policy needs about everything else submitted in this club. */
 export async function loadPolicyContext(args: {
+  orgId: string;
   requestId: string;
-  category: Category;
+  category: CategoryRule | null;
   imageHash: string;
   dedupeKey: string | null;
   today: string;
   memberEdited: PolicyContext["memberEdited"];
 }): Promise<PolicyContext & { duplicateOf: string | null }> {
   const requests = () => db().from("reimbursement_requests");
-  const monthStart = `${args.today.slice(0, 7)}-01`;
+  const periodStart = currentPeriod(args.category?.period ?? "month", new Date(`${args.today}T12:00:00Z`)).startsOn;
 
   const [spent, autoToday, dupes] = await Promise.all([
+    args.category
+      ? requests()
+          .select("total_cents")
+          .eq("org_id", args.orgId)
+          .eq("category", args.category.slug)
+          .in("status", ["auto_approved", "approved", "paid", "payment_failed"])
+          .gte("decided_at", periodStart)
+      : Promise.resolve({ data: [], error: null }),
     requests()
       .select("total_cents")
-      .eq("category", args.category)
-      .in("status", ["auto_approved", "approved", "paid", "payment_failed"])
-      .gte("decided_at", monthStart),
-    requests()
-      .select("total_cents")
+      .eq("org_id", args.orgId)
       .eq("decided_by", "policy")
       .in("status", ["auto_approved", "paid", "payment_failed"])
       .gte("decided_at", args.today),
     requests()
       .select("id, receipt_image_hash")
+      .eq("org_id", args.orgId)
       .neq("id", args.requestId)
       .neq("status", "submitted")
       // Both values are made only of [a-z0-9|-], so they're safe in this filter.
@@ -112,7 +83,7 @@ export async function loadPolicyContext(args: {
 
   return {
     today: args.today,
-    categorySpentThisMonthCents: sum(spent.data),
+    categorySpentThisPeriodCents: sum(spent.data as { total_cents: number | null }[]),
     clubAutoApprovedTodayCents: sum(autoToday.data),
     duplicate: samePhoto ? "same_photo" : dupeRows.length > 0 ? "same_details" : null,
     duplicateOf: first?.id ?? null,
@@ -124,27 +95,30 @@ export async function loadPolicyContext(args: {
 
 type PayoutRequestRow = PayoutRow & {
   id: string;
+  org_id: string;
   privy_user_id: string;
   total_cents: number;
-  category: Category;
+  category: string;
   vendor: string | null;
   receipt_image_hash: string;
   squads_transaction_index: number | string | null;
   approval_tx: string | null;
   member: { solana_address: string } | null;
+  org: Org;
 };
 
 const PAYOUT_SELECT =
-  "id, privy_user_id, status, total_cents, category, vendor, receipt_image_hash, payout_signature, payout_claimed_at, squads_transaction_index, approval_tx, member:members(solana_address)";
+  "id, org_id, privy_user_id, status, total_cents, category, vendor, receipt_image_hash, payout_signature, payout_claimed_at, squads_transaction_index, approval_tx, member:members(solana_address), org:orgs(id, name, squads_multisig_address, squads_vault_address, squads_spending_limit_address, vault_status)";
 
-async function loadPayoutRow(requestId: string): Promise<PayoutRequestRow> {
+async function loadPayoutRow(orgId: string, requestId: string): Promise<PayoutRequestRow | null> {
   const { data, error } = await db()
     .from("reimbursement_requests")
     .select(PAYOUT_SELECT)
+    .eq("org_id", orgId)
     .eq("id", requestId)
-    .single();
+    .maybeSingle();
   if (error) throw new Error(`payout lookup: ${error.message}`);
-  return data as unknown as PayoutRequestRow;
+  return data as unknown as PayoutRequestRow | null;
 }
 
 /** Public memo on every payout: request id + receipt fingerprint (no personal data). */
@@ -154,19 +128,31 @@ function payoutMemo(row: Pick<PayoutRequestRow, "id" | "receipt_image_hash">): s
 
 export type PayoutResult = "paid" | "processing" | "failed" | "not_payable" | "queued";
 
+async function categoryLabel(orgId: string, slug: string): Promise<string> {
+  const { data } = await db()
+    .from("org_categories")
+    .select("name")
+    .eq("org_id", orgId)
+    .eq("slug", slug)
+    .maybeSingle<{ name: string }>();
+  return data?.name ?? slug;
+}
+
 async function recordPaid(row: PayoutRequestRow, signature: string) {
   const { error } = await db()
     .from("reimbursement_requests")
     .update({ status: "paid", paid_at: new Date().toISOString(), payout_error: null, approval_tx: null })
+    .eq("org_id", row.org_id)
     .eq("id", row.id);
   if (error) throw new Error(`payout update: ${error.message}`);
 
   // Public ledger. The vendor came off a receipt: it's shown as plain text only.
-  const label = CATEGORY_LABELS[row.category];
+  const label = await categoryLabel(row.org_id, row.category);
   const { error: ledgerError } = await db()
     .from("ledger_entries")
     .upsert(
       {
+        org_id: row.org_id,
         direction: "out",
         kind: "reimbursement",
         amount_cents: row.total_cents,
@@ -180,11 +166,12 @@ async function recordPaid(row: PayoutRequestRow, signature: string) {
   if (ledgerError) throw new Error(`ledger insert: ${ledgerError.message}`);
 }
 
-async function markFailed(id: string, message: string) {
+async function markFailed(row: PayoutRequestRow, message: string) {
   await db()
     .from("reimbursement_requests")
     .update({ status: "payment_failed", payout_error: message })
-    .eq("id", id);
+    .eq("org_id", row.org_id)
+    .eq("id", row.id);
 }
 
 const ALLOWANCE_USED_UP: ReviewReason = {
@@ -193,7 +180,7 @@ const ALLOWANCE_USED_UP: ReviewReason = {
 };
 
 /**
- * The server's daily allowance can't cover this one: hand it to the
+ * The club's daily allowance can't cover this one: hand it to the
  * treasurer instead (and open a proposal for them to approve).
  */
 async function sendToTreasurer(row: PayoutRequestRow): Promise<PayoutResult> {
@@ -209,11 +196,14 @@ async function sendToTreasurer(row: PayoutRequestRow): Promise<PayoutResult> {
       payout_signature: null,
       payout_claimed_at: null,
     })
+    .eq("org_id", row.org_id)
     .eq("id", row.id)
     .in("status", ["auto_approved", "payment_failed"])
     .select("id");
   if (error) throw new Error(`send to treasurer: ${error.message}`);
-  if (data?.length) await ensureProposal(row.id).catch((e) => console.error("proposal:", (e as Error).message));
+  if (data?.length) {
+    await ensureProposal(row.org_id, row.id).catch((e) => console.error("proposal:", (e as Error).message));
+  }
   return "queued";
 }
 
@@ -222,22 +212,22 @@ async function sendToTreasurer(row: PayoutRequestRow): Promise<PayoutResult> {
  * from several requests at once: the row is claimed before anything is
  * signed, and the signature is saved before anything is sent.
  *
- * With the Squads vault set up, instant (policy-approved) payouts use the
- * server's daily allowance. Treasurer-approved payouts are sent by the
- * treasurer's own account (submitTreasurerApproval); here we only check on them.
+ * Instant (policy-approved) payouts use the club's daily allowance from its
+ * vault. Treasurer-approved payouts are sent by the treasurer's own account
+ * (finishTreasurerApproval); here we only check on them.
  */
-export async function payOut(requestId: string): Promise<PayoutResult> {
+export async function payOut(orgId: string, requestId: string): Promise<PayoutResult> {
   const requests = () => db().from("reimbursement_requests");
-  const row = await loadPayoutRow(requestId);
+  const row = await loadPayoutRow(orgId, requestId);
+  if (!row) return "not_payable";
+  const config = squadsConfigFor(row.org);
 
   // Treasurer-approved, paid through a Squads proposal.
-  if (row.squads_transaction_index !== null && squadsConfig()) {
+  if (row.squads_transaction_index !== null) {
     if (row.status === "payment_failed") {
-      // Failed outside the vault (e.g. before it was set up): back to the
-      // treasurer, who approves it through its proposal.
-      await db()
-        .from("reimbursement_requests")
+      await requests()
         .update({ status: "queued", payout_error: null, decided_by: null, decided_at: null, payout_signature: null, payout_claimed_at: null })
+        .eq("org_id", orgId)
         .eq("id", row.id)
         .eq("status", "payment_failed");
       return "queued";
@@ -255,8 +245,11 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
     return "paid";
   }
 
-  const config = squadsConfig();
-  if (config && row.total_cents && (await allowanceLeft(config)) < centsToUnits(row.total_cents)) {
+  if (!config) {
+    await markFailed(row, "This club's account is still being set up.");
+    return "failed";
+  }
+  if (row.total_cents && (await allowanceLeft(config)) < centsToUnits(row.total_cents)) {
     return sendToTreasurer(row);
   }
 
@@ -268,6 +261,7 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
       payout_error: null,
       status: row.status === "payment_failed" ? "approved" : row.status,
     })
+    .eq("org_id", orgId)
     .eq("id", row.id)
     .eq("status", row.status as RequestStatus);
   claim = row.payout_claimed_at
@@ -281,29 +275,25 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
   if (!claimed?.length) return "processing";
 
   if (!row.member?.solana_address || !row.total_cents) {
-    await markFailed(row.id, "This member's account isn't set up for payouts.");
+    await markFailed(row, "This member's account isn't set up for payouts.");
     return "failed";
   }
 
   let payment;
   try {
-    payment = config
-      ? await signWithTreasury(
-          await allowancePaymentInstructions(config, row.member.solana_address, row.total_cents, payoutMemo(row)),
-        )
-      : await signDollarTransfer(row.member.solana_address, row.total_cents, payoutMemo(row));
+    payment = await signWithTreasury(
+      await allowancePaymentInstructions(config, row.member.solana_address, row.total_cents, payoutMemo(row)),
+    );
   } catch (err) {
-    const message = (err as Error).message.includes("enough dollars")
-      ? "The club doesn't have enough money for this payout."
-      : "The payout couldn't be prepared. Try again.";
     console.error("payout prepare failed:", (err as Error).message);
-    await markFailed(row.id, message);
+    await markFailed(row, "The payout couldn't be prepared. Try again.");
     return "failed";
   }
 
   // Save the signature BEFORE sending, so a retry can check whether it landed.
   const { error: sigError } = await requests()
     .update({ payout_signature: payment.signature })
+    .eq("org_id", orgId)
     .eq("id", row.id);
   if (sigError) throw new Error(`payout save: ${sigError.message}`);
 
@@ -325,7 +315,7 @@ export async function payOut(requestId: string): Promise<PayoutResult> {
     return "paid";
   }
   if (result === "failed") {
-    await markFailed(row.id, "The payout didn't go through. Try again.");
+    await markFailed(row, "The payout didn't go through. Try again.");
     return "failed";
   }
   return "processing";
@@ -345,6 +335,7 @@ async function reopen(row: PayoutRequestRow) {
       payout_claimed_at: null,
       approval_tx: null,
     })
+    .eq("org_id", row.org_id)
     .eq("id", row.id)
     .eq("status", "approved");
 }
@@ -363,27 +354,26 @@ async function settleProposalPayout(row: PayoutRequestRow): Promise<PayoutResult
   return "queued";
 }
 
-/** Make sure a queued request has a Squads proposal. Returns its index (or null without Squads). */
-export async function ensureProposal(requestId: string): Promise<bigint | null> {
-  const config = squadsConfig();
+/** Make sure a queued request has a Squads proposal. Returns its index (or null if it can't have one). */
+export async function ensureProposal(orgId: string, requestId: string): Promise<bigint | null> {
+  const row = await loadPayoutRow(orgId, requestId);
+  if (!row) return null;
+  const config = squadsConfigFor(row.org);
   if (!config) return null;
-  const row = await loadPayoutRow(requestId);
   if (row.squads_transaction_index !== null) return BigInt(row.squads_transaction_index);
   if (row.status !== "queued" || !row.member?.solana_address || !row.total_cents) return null;
 
-  const index = await createPaymentProposal(
-    config,
-    row.member.solana_address,
-    row.total_cents,
-    payoutMemo(row),
-  );
+  const index = await createPaymentProposal(config, row.member.solana_address, row.total_cents, payoutMemo(row));
   await db()
     .from("reimbursement_requests")
     .update({ squads_transaction_index: index.toString() })
+    .eq("org_id", orgId)
     .eq("id", row.id)
     .is("squads_transaction_index", null);
   return index;
 }
+
+export type Approver = { userId: string; solanaAddress: string };
 
 export type ApprovalStart =
   | { status: "ready"; transaction: string }
@@ -394,34 +384,40 @@ export type ApprovalStart =
  * account to approve (silently, in the browser).
  */
 export async function startTreasurerApproval(
+  org: Org,
   requestId: string,
-  treasurer: CurrentMember,
+  treasurer: Approver,
 ): Promise<ApprovalStart> {
-  const config = squadsConfig();
+  const config = squadsConfigFor(org);
   if (!config) return { status: "unavailable" };
   if (!(await isVaultApprover(config, treasurer.solanaAddress))) return { status: "not_approver" };
 
-  let row = await loadPayoutRow(requestId);
+  let row = await loadPayoutRow(org.id, requestId);
+  if (!row) return { status: "not_found" };
   if (row.status === "approved") {
-    const settled = await payOut(row.id);
+    const settled = await payOut(org.id, row.id);
     if (settled === "paid") return { status: "paid" };
     if (settled === "processing") return { status: "processing" };
-    row = await loadPayoutRow(requestId);
+    row = await loadPayoutRow(org.id, requestId);
+    if (!row) return { status: "not_found" };
   }
   if (row.status === "paid") return { status: "paid" };
   if (row.status !== "queued") return { status: "not_found" };
 
-  let index = await ensureProposal(row.id);
+  let index = await ensureProposal(org.id, row.id);
   if (index === null) return { status: "unavailable" };
   let prep = await prepareProposalApproval(config, index, treasurer.solanaAddress);
   if (prep.status === "unavailable") {
-    // The old proposal is gone or closed: open a fresh one.
-    await db().from("reimbursement_requests").update({ squads_transaction_index: null }).eq("id", row.id);
-    index = await ensureProposal(row.id);
+    // The old proposal is gone, closed, or stale: open a fresh one.
+    await db()
+      .from("reimbursement_requests")
+      .update({ squads_transaction_index: null })
+      .eq("org_id", org.id)
+      .eq("id", row.id);
+    index = await ensureProposal(org.id, row.id);
     if (index === null) return { status: "unavailable" };
     prep = await prepareProposalApproval(config, index, treasurer.solanaAddress);
   }
-  if (prep.status === "executed") return { status: "unavailable" };
   if (prep.status !== "ready") return { status: "unavailable" };
 
   const { error } = await db()
@@ -431,6 +427,7 @@ export async function startTreasurerApproval(
       payout_signature: prep.payment.signature,
       payout_claimed_at: new Date().toISOString(),
     })
+    .eq("org_id", org.id)
     .eq("id", row.id)
     .eq("status", "queued");
   if (error) throw new Error(`approval save: ${error.message}`);
@@ -442,12 +439,13 @@ export async function startTreasurerApproval(
  * prepared, send it, and record the payout.
  */
 export async function finishTreasurerApproval(
+  org: Org,
   requestId: string,
-  treasurer: CurrentMember,
+  treasurer: Approver,
   signedWire: string,
 ): Promise<"paid" | "processing" | "failed" | "conflict"> {
-  const row = await loadPayoutRow(requestId);
-  if (row.status !== "queued" || !row.payout_signature || !row.approval_tx) return "conflict";
+  const row = await loadPayoutRow(org.id, requestId);
+  if (!row || row.status !== "queued" || !row.payout_signature || !row.approval_tx) return "conflict";
 
   let wire: string;
   try {
@@ -459,6 +457,7 @@ export async function finishTreasurerApproval(
   const { data: claimed, error } = await db()
     .from("reimbursement_requests")
     .update({ status: "approved", decided_by: treasurer.userId, decided_at: new Date().toISOString() })
+    .eq("org_id", org.id)
     .eq("id", row.id)
     .eq("status", "queued")
     .eq("payout_signature", row.payout_signature)

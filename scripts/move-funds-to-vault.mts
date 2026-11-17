@@ -6,13 +6,22 @@ process.loadEnvFile(".env.local");
 
 const { formatUsd } = await import("@/lib/money");
 const { getDollarBalance } = await import("@/lib/solana/balance");
-const { squadsConfig } = await import("@/lib/solana/squads");
+const { squadsConfigFor } = await import("@/lib/solana/squads");
+// Which club: --club=<id> (defaults to the demo club).
+const { DEFAULT_ORG_ID, loadOrg } = await import("@/lib/orgs/orgs");
+const clubArg = process.argv.find((a) => a.startsWith("--club="))?.slice("--club=".length);
+const club = await loadOrg(clubArg ?? DEFAULT_ORG_ID);
+if (!club) {
+  console.error(`No club with id ${clubArg}.`);
+  process.exit(1);
+}
+
 const { getTreasurySigner } = await import("@/lib/solana/treasury");
 const { sendDollars } = await import("@/lib/solana/transfer");
 
-const config = squadsConfig();
+const config = squadsConfigFor(club);
 if (!config) {
-  console.error("Set SQUADS_MULTISIG_ADDRESS, SQUADS_VAULT_ADDRESS and SQUADS_SPENDING_LIMIT_ADDRESS in .env.local first.");
+  console.error("This club's vault isn't set up yet.");
   process.exit(1);
 }
 

@@ -69,6 +69,15 @@ The AI EXTRACTS and EXPLAINS. Code DECIDES and PAYS.
 * Addresses come from env: `SQUADS_MULTISIG_ADDRESS`, `SQUADS_VAULT_ADDRESS`, `SQUADS_SPENDING_LIMIT_ADDRESS`. If they're unset, the app falls back to the old treasury wallet.
 * Branch rule: all Squads work happens on `feature-squads` and is merged to `main` only once it works end to end.
 
+## **Multi-club (branch `feature-multi-club`, in progress)**
+
+* Any student club ("org") can use the app. Tables: `orgs` (name, school, join code, its own Squads vault addresses), `org_memberships` (role member|treasurer, status pending|active|removed|declined), `org_settings` (dues amount/period, auto-approve cap, daily limit, receipt age), `org_categories` (the club's own categories + budget per month|semester), `org_vault_changes`. `dues_payments`, `reimbursement_requests`, `ledger_entries` have `org_id`.
+* The demo club is `00000000-0000-4000-8000-000000000001` ("Club Treasury Demo", join code CLUB-2026), using the vault set up on Nov 16.
+* Isolation rule: every club-scoped API route lives under `app/api/orgs/[orgId]/` and starts with `requireMember(request, orgId)` or `requireTreasurer(request, orgId)` from `lib/orgs/access.ts`; every query on a club table filters `.eq("org_id", orgId)`. `tests/route-guards.test.ts` enforces this (treasurer-only folders: treasurer, settings, categories, members, join-code, vault). The public ledger is the one exception: `app/api/ledger/[orgId]`.
+* Each club gets its own Squads vault when created (`lib/orgs/create.ts` → `lib/orgs/vault.ts`). Changing the daily limit or adding/removing a co-treasurer is an on-chain vault change the treasurer's account approves silently (`prepareVaultChange` / `finishVaultChange`).
+* Pages: `/` (login, then to your club), `/c/[orgId]` (member home), `/c/[orgId]/reimburse`, `/c/[orgId]/treasurer`, public `/ledger/[orgId]`. Client pages get the club from `useOrg()` (`app/_components/OrgProvider.tsx`) and call APIs with `useAuthFetch()`.
+* DB changes are additive while main shares the database; `supabase/migrations/20261117000001_multi_club_merge.sql` is applied only when merging.
+
 ## **Folder layout**
 
 * `app/` — the five screens above  
