@@ -17,14 +17,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ClubMenu } from "../../../_components/ClubSwitcher";
 import { Mark } from "../../../_components/Mark";
 import { useOrg } from "../../../_components/OrgProvider";
 import { CountBadge } from "../../../_components/ui/Badge";
 import { ICON_STROKE } from "../../../_components/ui/ListRow";
 import { Sheet } from "../../../_components/ui/Sheet";
-import { useAuthFetch } from "../../../_components/useAuthFetch";
+import { useLiveData } from "../../../_components/useLiveData";
 
 // The frame around every club page: one navigation for everyone, based on
 // role. Wide screens get a glass rail on the right (labels at 1024px+, icons
@@ -53,31 +53,15 @@ export function useShell() {
   return useContext(ShellContext);
 }
 
-function useApprovalsCount(orgId: string, isTreasurer: boolean, pathname: string) {
-  const authFetch = useAuthFetch();
-  const [count, setCount] = useState<number | null>(null);
-
-  const load = useCallback(async () => {
-    if (!isTreasurer) return;
-    try {
-      const res = await authFetch(`/api/orgs/${orgId}/treasurer/overview`);
-      if (!res.ok) return;
-      const body = (await res.json()) as { waitingCount?: number };
-      if (typeof body.waitingCount === "number") setCount(body.waitingCount);
-    } catch {
-      // Keep the last count.
-    }
-  }, [authFetch, orgId, isTreasurer]);
-
-  useEffect(() => {
-    if (!isTreasurer) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- load the badge
-    load();
-    const timer = setInterval(load, 60_000);
-    return () => clearInterval(timer);
-  }, [load, isTreasurer, pathname]);
-
-  return { count: isTreasurer ? count : null, refresh: load };
+// The red Approvals badge: live (every 10 seconds, and right after any
+// approve / deny / new receipt). Only fetched for treasurers.
+function useApprovalsCount(orgId: string, isTreasurer: boolean) {
+  const live = useLiveData<{ waitingCount?: number }>(
+    isTreasurer ? `/api/orgs/${orgId}/treasurer/overview` : null,
+    { intervalMs: 10_000 },
+  );
+  const count = typeof live.data?.waitingCount === "number" ? live.data.waitingCount : null;
+  return { count: isTreasurer ? count : null, refresh: live.refresh };
 }
 
 function useNavItems(approvals: number | null) {
@@ -146,7 +130,7 @@ function useNavItems(approvals: number | null) {
 export function AppShell({ children }: { children: ReactNode }) {
   const { orgId, isTreasurer } = useOrg();
   const pathname = usePathname();
-  const { count, refresh } = useApprovalsCount(orgId, isTreasurer, pathname);
+  const { count, refresh } = useApprovalsCount(orgId, isTreasurer);
   const nav = useNavItems(count);
 
   return (

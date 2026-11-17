@@ -2,9 +2,8 @@
 
 import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import type { LedgerItem } from "@/lib/ledger/view";
-import { useAuthFetch } from "./useAuthFetch";
+import { useLiveData } from "./useLiveData";
 import { EmptyState } from "./ui/EmptyState";
 import { SectionLabel } from "./ui/GlassCard";
 
@@ -45,26 +44,11 @@ export function ActivityRow({ e, showingNames }: { e: LedgerItem; showingNames: 
 }
 
 // The latest few money movements on the club home, with "See all".
-export function RecentActivity({ orgId, refreshKey = 0, limit = 5 }: { orgId: string; refreshKey?: number; limit?: number }) {
-  const authFetch = useAuthFetch();
-  const [data, setData] = useState<{ entries: LedgerItem[]; showingNames: boolean } | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await authFetch(`/api/ledger/${orgId}`);
-        if (!res.ok) return;
-        const body = (await res.json()) as { entries: LedgerItem[]; showingNames: boolean };
-        if (!cancelled) setData(body);
-      } catch {
-        // Keep the last list.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authFetch, orgId, refreshKey]);
+export function RecentActivity({ orgId, limit = 5 }: { orgId: string; limit?: number }) {
+  // Live: every 15 seconds, and right away when anything changes.
+  const { data } = useLiveData<{ entries: LedgerItem[]; showingNames: boolean }>(`/api/ledger/${orgId}`, {
+    intervalMs: 15_000,
+  });
 
   return (
     <section className="flex flex-col gap-2">

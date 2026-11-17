@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { TabCode } from "@/lib/dashboard/tabs";
 import type { Overview, RequestDetail, RequestList } from "@/lib/dashboard/types";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
+import { signalDataChanged, useLiveData, useOnDataChanged } from "../../../_components/useLiveData";
 import { useOrg } from "../../../_components/OrgProvider";
 import { useShell } from "../_components/AppShell";
 import { PageHeader, treasurerPage } from "../_components/PageHeader";
@@ -23,8 +24,11 @@ export default function TreasurerDashboard() {
   const actions = useTreasurerActions(orgId);
   const { refreshApprovals } = useShell();
 
-  const [overview, setOverview] = useState<Overview | null>(null);
-  const [overviewFailed, setOverviewFailed] = useState(false);
+  // Club numbers stay live: every 10 seconds, and right after any change.
+  const live = useLiveData<Overview>(`/api/orgs/${orgId}/treasurer/overview`, { intervalMs: 10_000 });
+  const overview = live.data;
+  const overviewFailed = live.error;
+  const loadOverview = live.refresh;
   const [tab, setTab] = useState<TabCode>("needs_approval");
   const [list, setList] = useState<RequestList | null>(null);
   const [listFailed, setListFailed] = useState(false);
@@ -38,17 +42,6 @@ export default function TreasurerDashboard() {
   // Ignore answers that arrive after the treasurer moved on.
   const tabRef = useRef(tab);
   const selectedRef = useRef(selectedId);
-
-  const loadOverview = useCallback(async () => {
-    try {
-      const res = await authFetch(`/api/orgs/${orgId}/treasurer/overview`);
-      if (!res.ok) throw new Error();
-      setOverview((await res.json()) as Overview);
-      setOverviewFailed(false);
-    } catch {
-      setOverviewFailed(true);
-    }
-  }, [authFetch, orgId]);
 
   const loadList = useCallback(
     async (which: TabCode) => {
@@ -84,18 +77,14 @@ export default function TreasurerDashboard() {
   );
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial load
-    loadOverview();
-    const timer = setInterval(loadOverview, 30_000);
-    return () => clearInterval(timer);
-  }, [loadOverview]);
-
-  useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- load the chosen tab
     loadList(tab);
-    const timer = setInterval(() => loadList(tab), 15_000); // pick up new requests
+    const timer = setInterval(() => loadList(tab), 10_000); // pick up new requests
     return () => clearInterval(timer);
   }, [loadList, tab]);
+
+  // A new receipt or a payment anywhere: refresh the list now.
+  useOnDataChanged(() => loadList(tabRef.current));
 
   function chooseTab(next: TabCode) {
     tabRef.current = next;
@@ -124,6 +113,7 @@ export default function TreasurerDashboard() {
     setNotice(null);
     try {
       setNotice(await work(target));
+      signalDataChanged(); // the badge, tiles and other tabs refresh
     } catch {
       setNotice("That didn't work. Try again.");
     } finally {

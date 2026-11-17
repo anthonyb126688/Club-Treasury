@@ -12,6 +12,7 @@ import { ActivityRow } from "../../_components/RecentActivity";
 import { EmptyState, ErrorState, LoadingBlocks } from "../../_components/ui/EmptyState";
 import { IconTile } from "../../_components/ui/ListRow";
 import { PageHeader } from "../../_components/ui/PageHeader";
+import { useLiveData } from "../../_components/useLiveData";
 
 type LedgerResponse = {
   club: { name: string; school: string };
@@ -23,10 +24,21 @@ type LedgerResponse = {
 const REFRESH_MS = 5000;
 
 // Every dollar in and out, newest first, as list rows with a Verify link.
-// Used for the public ledger (/ledger/[orgId], no login needed) and, with
-// `embedded`, for Activity inside the app (/c/[orgId]/activity).
-// Refreshes itself every few seconds so new dues show up without reloading.
+// Used for the public ledger (/ledger/[orgId], no login needed; refreshes
+// every 5 seconds) and, with `embedded`, for Activity inside the app
+// (/c/[orgId]/activity; live via useLiveData).
 export function LedgerView({ embedded = false }: { embedded?: boolean }) {
+  return embedded ? <ActivityLive /> : <PublicLedger />;
+}
+
+function ActivityLive() {
+  const { orgId } = useParams<{ orgId: string }>();
+  // Live: every 15 seconds, and right away when anything changes.
+  const { data, error } = useLiveData<LedgerResponse>(`/api/ledger/${orgId}`, { intervalMs: 15_000 });
+  return <LedgerContent embedded orgId={orgId} authenticated data={data} failed={error} />;
+}
+
+function PublicLedger() {
   const { orgId } = useParams<{ orgId: string }>();
   const { ready, authenticated, getAccessToken } = usePrivy();
   const [data, setData] = useState<LedgerResponse | null>(null);
@@ -63,6 +75,22 @@ export function LedgerView({ embedded = false }: { embedded?: boolean }) {
     };
   }, [ready, authenticated, getAccessToken, orgId]);
 
+  return <LedgerContent embedded={false} orgId={orgId} authenticated={authenticated} data={data} failed={failed} />;
+}
+
+function LedgerContent({
+  embedded,
+  orgId,
+  authenticated,
+  data,
+  failed,
+}: {
+  embedded: boolean;
+  orgId: string;
+  authenticated: boolean;
+  data: LedgerResponse | null;
+  failed: boolean;
+}) {
   const intro = "Every dollar that comes in or goes out of the club. Tap Verify to see the public record.";
 
   return (

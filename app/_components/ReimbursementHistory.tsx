@@ -6,6 +6,7 @@ import { StepBar } from "../c/[orgId]/_components/StepBar";
 import { EmptyState, ErrorState, LoadingBlocks } from "./ui/EmptyState";
 import { SectionLabel } from "./ui/GlassCard";
 import { useAuthFetch } from "./useAuthFetch";
+import { useOnDataChanged } from "./useLiveData";
 
 type Item = {
   id: string;
@@ -29,6 +30,9 @@ export function ReimbursementHistory({ orgId, onChange }: { orgId: string; onCha
   const authFetch = useAuthFetch();
   const [items, setItems] = useState<Item[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // Anything changed (a receipt sent, a payout, an approval): reload now.
+  const [tick, setTick] = useState(0);
+  useOnDataChanged(() => setTick((t) => t + 1));
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +71,7 @@ export function ReimbursementHistory({ orgId, onChange }: { orgId: string; onCha
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [authFetch, onChange, orgId]);
+  }, [authFetch, onChange, orgId, tick]);
 
   return (
     <section className="flex flex-col gap-2">

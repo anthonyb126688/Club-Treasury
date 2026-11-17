@@ -2,7 +2,7 @@
 
 import { Check, Receipt } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { budgetRing, type BudgetRing, type RingCategory } from "@/lib/member/ring";
 import { formatCents } from "@/lib/money";
 import { Ring } from "../../_components/charts/Ring";
@@ -13,50 +13,26 @@ import { ReimbursementHistory } from "../../_components/ReimbursementHistory";
 import { Button, ButtonLink } from "../../_components/ui/Button";
 import { GlassCard } from "../../_components/ui/GlassCard";
 import { PageHeader } from "../../_components/ui/PageHeader";
-import { useAuthFetch } from "../../_components/useAuthFetch";
+import { signalDataChanged, useLiveData } from "../../_components/useLiveData";
 
 // A club's home (phone-first): balances with Get reimbursed and Pay dues,
 // how much of the club budget is spent, dues status, my requests, and the
 // latest money in and out.
 export default function ClubHome() {
   const { orgId, club, me, isTreasurer } = useOrg();
-  const authFetch = useAuthFetch();
-  const [balance, setBalance] = useState<string | null>(null);
   const [clubBalance, setClubBalance] = useState<string | null>(null);
-  const [ring, setRing] = useState<BudgetRing | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+  // Live: every 15 seconds, and right away when anything changes.
+  const balanceLive = useLiveData<{ balance: string | null }>("/api/balance", { intervalMs: 15_000 });
+  const budgetLive = useLiveData<{ categories: RingCategory[] }>(`/api/orgs/${orgId}/budget`, { intervalMs: 15_000 });
+  const balance = balanceLive.data?.balance ?? null;
+  const ring: BudgetRing | null = budgetLive.data ? budgetRing(budgetLive.data.categories) : null;
+  // A payout landed or dues went through: every live number refreshes.
+  const reload = useCallback(() => signalDataChanged(), []);
   const { dues, busy, message, payDues } = useDues({
     orgId,
     onPaid: reload,
     onClubBalance: setClubBalance,
-    refreshKey: reloadKey,
   });
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await authFetch("/api/balance");
-        if (res.ok && !cancelled) setBalance(((await res.json()) as { balance: string | null }).balance);
-      } catch {
-        // Keep the last balance on screen.
-      }
-    })();
-    (async () => {
-      try {
-        const res = await authFetch(`/api/orgs/${orgId}/budget`);
-        if (!res.ok) return;
-        const body = (await res.json()) as { categories: RingCategory[] };
-        if (!cancelled) setRing(budgetRing(body.categories));
-      } catch {
-        // The ring just stays hidden.
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authFetch, orgId, reloadKey]);
 
   const duesPaid = dues?.status === "paid";
   const duesPending = dues?.status === "pending";
@@ -144,7 +120,7 @@ export default function ClubHome() {
 
         <div className="flex min-w-0 flex-col gap-5">
           <ReimbursementHistory orgId={orgId} onChange={reload} />
-          <RecentActivity orgId={orgId} refreshKey={reloadKey} />
+          <RecentActivity orgId={orgId} />
         </div>
       </div>
     </main>

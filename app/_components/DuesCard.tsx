@@ -4,6 +4,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useSignTransaction } from "@privy-io/react-auth/solana";
 import { useCallback, useEffect, useState } from "react";
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
+import { signalDataChanged, useOnDataChanged } from "./useLiveData";
 
 export type DuesStatus = {
   term: string;
@@ -56,6 +57,9 @@ export function useDues({
     refresh();
   }, [refresh, refreshKey]);
 
+  // Club balance and dues status follow other people's payments too.
+  useOnDataChanged(refresh);
+
   // While a payment is processing, check back until it settles.
   useEffect(() => {
     if (dues?.status !== "pending") return;
@@ -97,7 +101,10 @@ export function useDues({
         body: JSON.stringify({ transaction: toBase64(signedTransaction) }),
       });
       const s = sub.ok ? ((await sub.json()) as { status: string }) : { status: "failed" };
-      if (s.status === "paid") onPaid();
+      if (s.status === "paid") {
+        onPaid();
+        signalDataChanged(); // every live screen refreshes
+      }
       if (s.status === "failed") setMessage("We couldn't finish your dues payment. Try again.");
       await refresh();
     } catch {

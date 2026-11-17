@@ -16,7 +16,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 | 2 App shell | ui-2-shell | DONE |
 | 3 Restyle every screen | ui-3-pages | DONE |
 | 4 Insights backend | insights-4-api | DONE |
-| 5 Live data | insights-5-live | not started |
+| 5 Live data | insights-5-live | DONE |
 | 6 Insights page | insights-6-page | not started |
 | 7 Final check | ui-final | not started |
 
@@ -98,6 +98,10 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - Insights "Spent" = spent statuses decided in the range. "Auto-approved share" = the share of those decided by the policy (`decided_by = 'policy'`).
   - The club balance in Insights is read the same way as the overview (`getDollarBalance(clubHolderAddress(org))`). If that fails, `balance` is null and the rest still loads.
 
+- Phase 5 decisions:
+  - The public ledger page (`/ledger/[orgId]`, no login) keeps its own 5-second refresh, as decided on Nov 16. The in-app Activity uses `useLiveData` (15s plus the signal). `LedgerView` is split into `ActivityLive`, `PublicLedger` and a shared `LedgerContent`.
+  - Animations: ProgressBar widths and the Ring ease over 300ms; new list rows use `fade-in`. Existing rows keep their keys, so they don't re-animate. Reduced motion turns these off (globals.css).
+
 ## Skipped / reverted
 - (none yet)
 
@@ -120,5 +124,12 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - Routes: `GET app/api/orgs/[orgId]/treasurer/insights` and `.../treasurer/export` (both `requireTreasurer`, already covered by the "treasurer" folder in route-guards).
   - `tests/org-isolation.test.ts` gained a treasurer of Club A ("trish") who is refused Club B, plus a check that every Insights/export query filters by the requested club.
   - Checked live against Test Club: 200 with real numbers, CSV download with the right file name, and 404 for an unknown club.
-- NEXT: Phase 5, `useLiveData` hook + "data changed" signal.
+- Phase 5 done:
+  - `app/_components/useLiveData.ts` provides `useLiveData(url, { intervalMs })`, `signalDataChanged()` and `useOnDataChanged(fn)`. The pure state rules live in `lib/live/state.ts` (tested in `tests/live-state.test.ts`: keep the last good data, error only after 2 failures in a row, plus the "Updated just now / N min ago" label).
+  - The hook polls only while the tab is visible, refetches on tab return or window focus, and refetches on the signal. The signal is a window event plus `BroadcastChannel("club-data")`, so other tabs follow. A refresh asked for while one is already running runs once more right after it.
+  - The signal fires after: dues paid (`useDues`), a receipt sent (reimburse page), and approve / deny / retry (Approvals `run()`). Only client success handlers were changed; no server routes.
+  - Uses the hook (10s): the Approvals badge (AppShell) and the Approvals tiles. The request list polls every 10s and follows the signal.
+  - Uses the hook (15s): Home balance, the budget ring and Recent activity, and Activity. Club balance and dues (`useDues`) and My requests refresh on the signal.
+  - Checked live: firing the signal on Approvals made 3 refetches (badge, tiles, list) with no console errors.
+- NEXT: Phase 6, the Insights page and SVG charts.
 - Phase 3, page 1 (Home) done: glass balance card (club balance big, your balance small, black Get reimbursed, glass Pay dues), budget ring, dues status, My requests in a glass list with a black step bar, Recent activity (latest 5, "See all").

@@ -10,6 +10,7 @@ import { useOrg } from "../../../_components/OrgProvider";
 import { Button, ButtonLink } from "../../../_components/ui/Button";
 import { GlassCard } from "../../../_components/ui/GlassCard";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
+import { signalDataChanged } from "../../../_components/useLiveData";
 import { headerAction, memberPage, PageHeader } from "../_components/PageHeader";
 import { StepBar } from "../_components/StepBar";
 import { shrinkPhoto } from "./shrink-photo";
@@ -90,6 +91,7 @@ export default function ReimbursePage() {
       if (!res.ok) throw new Error();
       const { status } = (await res.json()) as { status: Outcome };
       setStep({ name: "done", outcome: status, amount: showDollars(totalCents) });
+      signalDataChanged(); // balances, requests and charts refresh everywhere
     } catch {
       setError("We couldn't send your request. Try again.");
       setStep({ name: "confirm", reading });
