@@ -13,7 +13,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 | Phase | Tag | State |
 |---|---|---|
 | 1 Design system | ui-1-tokens | DONE |
-| 2 App shell | ui-2-shell | partly exists (see "Starting point") |
+| 2 App shell | ui-2-shell | DONE |
 | 3 Restyle every screen | ui-3-pages | not started |
 | 4 Insights backend | insights-4-api | not started |
 | 5 Live data | insights-5-live | not started |
@@ -64,6 +64,12 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
 - `sheet-up` and `sheet-side` are Tailwind `@utility` entries so `lg:sheet-side` works.
 - The old `app/c/[orgId]/_components/PageHeader.tsx` now re-exports the new `app/_components/ui/PageHeader` (it still holds the page-width class strings).
 - `lucide-react` is pinned at 1.68.0 (added earlier).
+- Phase 2:
+  - The in-shell ledger route `/c/[orgId]/ledger` (from the earlier session) was renamed to `/c/[orgId]/activity`. Nothing else linked to the old path.
+  - Insights is a placeholder page until Phase 6.
+  - The Approvals badge still polls every 60s; Phase 5 makes it live.
+  - The More sheet uses the shared `Sheet` (always a bottom sheet).
+  - The phone tab bar is a floating glass pill, 12px from the sides, above the home bar.
 
 ## Skipped / reverted
 - (none yet)
@@ -74,3 +80,9 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - `globals.css` rewritten (light only, glass, system font, emphasis colors); layout drops Geist and Bricolage and adds the blurred background shapes; themeColor is #e9e9ec.
   - `app/_components/ui/`: GlassCard (+SectionLabel), Button (+ButtonLink, buttonClass), PageHeader, StatTile, SegmentedControl, ProgressBar (pace tick), ListRow (+IconTile, ListGroup), Badge (+CountBadge), Sheet, EmptyState (+ErrorState, LoadingBlocks).
   - lint, tests and build are green. Screenshot: `.playwright-mcp/redesign/p1-home-390.png`.
+- Phase 2 done:
+  - `AppShell.tsx` rewritten: glass rail (current item = darker glass + black icon tile), black Get reimbursed button, Manage group = Insights / Approvals (red CountBadge) / Members / Settings.
+  - Phones: glass top bar; floating pill tab bar (members: Home / Reimburse / Budget / Activity; treasurers: Home / Insights / Approvals / Members / More).
+  - New `/c/[orgId]/activity` and a placeholder `/c/[orgId]/treasurer/insights`.
+  - lint, tests and build are green. Screenshots: `.playwright-mcp/redesign/p2-*.png`.
+  - Note: `npx tsc` shows stale errors about `.next/types` after a route rename until the next build; this is not a real error.

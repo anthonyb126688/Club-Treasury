@@ -2,42 +2,37 @@
 
 import { usePrivy } from "@privy-io/react-auth";
 import {
+  ChartColumn,
   ChartPie,
   ChevronsUpDown,
   ClipboardCheck,
   Ellipsis,
   House,
+  ListOrdered,
   LogOut,
   Receipt,
-  ScrollText,
   Settings,
   Users,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ClubMenu } from "../../../_components/ClubSwitcher";
 import { Mark } from "../../../_components/Mark";
 import { useOrg } from "../../../_components/OrgProvider";
+import { CountBadge } from "../../../_components/ui/Badge";
+import { ICON_STROKE } from "../../../_components/ui/ListRow";
+import { Sheet } from "../../../_components/ui/Sheet";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
 
 // The frame around every club page: one navigation for everyone, based on
-// role. Wide screens get a rail on the right (labels at 1024px+, icons only
-// from 640px); phones get a slim top bar and a tab bar at the bottom.
-// The nav comes before the page in the page order (with a "Skip to
-// content" link); CSS grid puts it on the right.
+// role. Wide screens get a glass rail on the right (labels at 1024px+, icons
+// only from 640px); phones get a slim glass top bar and a floating pill tab
+// bar. The nav comes before the page in the DOM (with a "Skip to content"
+// link); CSS grid puts the rail on the right.
 
-const ICON = { size: 20, strokeWidth: 1.75, "aria-hidden": true } as const;
+const ICON = { size: 20, strokeWidth: ICON_STROKE, "aria-hidden": true } as const;
 
 type NavItem = {
   key: string;
@@ -107,14 +102,21 @@ function useNavItems(approvals: number | null) {
     icon: ChartPie,
     match: (p) => under(`${base}/budget`)(p) || under(`${t}/budget`)(p),
   };
-  const ledger: NavItem = {
-    key: "ledger",
-    href: `${base}/ledger`,
-    label: "Ledger",
-    icon: ScrollText,
-    match: under(`${base}/ledger`),
+  const activity: NavItem = {
+    key: "activity",
+    href: `${base}/activity`,
+    label: "Activity",
+    icon: ListOrdered,
+    match: under(`${base}/activity`),
   };
-  const approvalsItem: NavItem = {
+  const insights: NavItem = {
+    key: "insights",
+    href: `${t}/insights`,
+    label: "Insights",
+    icon: ChartColumn,
+    match: under(`${t}/insights`),
+  };
+  const approvals_: NavItem = {
     key: "approvals",
     href: t,
     label: "Approvals",
@@ -134,10 +136,10 @@ function useNavItems(approvals: number | null) {
   return {
     isTreasurer,
     reimburse,
-    main: [home, budget, ledger],
-    manage: isTreasurer ? [approvalsItem, members, settings] : [],
-    tabs: isTreasurer ? [home, approvalsItem, reimburse, members] : [home, reimburse, budget, ledger],
-    more: isTreasurer ? [budget, ledger, settings] : [],
+    main: [home, budget, activity],
+    manage: isTreasurer ? [insights, approvals_, members, settings] : [],
+    tabs: isTreasurer ? [home, insights, approvals_, members] : [home, reimburse, budget, activity],
+    more: isTreasurer ? [reimburse, budget, activity, settings] : [],
   };
 }
 
@@ -149,10 +151,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <ShellContext.Provider value={{ refreshApprovals: refresh }}>
-      <div className="grid min-h-dvh flex-1 grid-cols-1 grid-rows-[auto_1fr] sm:grid-rows-1 sm:grid-cols-[minmax(0,1fr)_72px] lg:grid-cols-[minmax(0,1fr)_240px]">
+      <div className="grid min-h-dvh flex-1 grid-cols-1 grid-rows-[auto_1fr] sm:grid-cols-[minmax(0,1fr)_72px] sm:grid-rows-1 lg:grid-cols-[minmax(0,1fr)_240px]">
         <a
           href="#content"
-          className="sr-only z-50 rounded-xl bg-white px-4 py-2 font-medium shadow focus:not-sr-only focus:fixed focus:top-3 focus:left-3 dark:bg-zinc-900"
+          className="glass-strong sr-only z-[60] rounded-[12px] px-4 py-2 font-semibold focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
         >
           Skip to content
         </a>
@@ -164,7 +166,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div
           id="content"
           tabIndex={-1}
-          className="flex min-w-0 flex-col pt-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] outline-none sm:col-start-1 sm:row-start-1 sm:pt-8 sm:pb-0"
+          className="flex min-w-0 flex-col pt-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] outline-none sm:col-start-1 sm:row-start-1 sm:pt-8 sm:pb-0"
         >
           {children}
         </div>
@@ -205,7 +207,7 @@ function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?:
         aria-haspopup="menu"
         aria-label={compact ? `${name}: switch club` : undefined}
         title={compact ? name : undefined}
-        className={`flex w-full min-w-0 items-center gap-2.5 rounded-xl text-left hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+        className={`flex w-full min-w-0 items-center gap-2.5 rounded-[12px] text-left hover:bg-black/[0.04] ${
           compact ? "justify-center p-2" : "px-2 py-2"
         }`}
       >
@@ -213,17 +215,18 @@ function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?:
         {!compact && (
           <>
             <span className="min-w-0 flex-1">
-              <span className="block truncate font-display font-semibold leading-tight">{name}</span>
-              {club?.school && <span className="block truncate text-xs text-zinc-500">{club.school}</span>}
+              <span className="block truncate text-[15px] leading-tight font-semibold">{name}</span>
+              {club?.school && <span className="block truncate text-[12px] text-muted">{club.school}</span>}
             </span>
-            <ChevronsUpDown size={16} strokeWidth={1.75} aria-hidden className="shrink-0 text-zinc-400" />
+            <ChevronsUpDown size={16} strokeWidth={ICON_STROKE} aria-hidden className="shrink-0 text-zinc-400" />
           </>
         )}
       </button>
       {open && (
         <div
           role="menu"
-          className="absolute top-full right-0 z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-zinc-200 bg-white p-2 shadow-[0_12px_40px_-12px_rgb(13_18_16/0.25)] dark:border-zinc-800 dark:bg-zinc-900"
+          className="glass absolute top-full right-0 z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-[16px] p-2"
+          style={{ background: "rgb(250 250 252 / 0.95)" }}
         >
           <ClubMenu onNavigate={() => setOpen(false)} />
           {withLogout && (
@@ -231,7 +234,7 @@ function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?:
               type="button"
               role="menuitem"
               onClick={logout}
-              className="w-full rounded-xl px-3 py-2 text-left text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="w-full rounded-[10px] px-3 py-2.5 text-left text-sm text-zinc-600 hover:bg-black/[0.05]"
             >
               Log out
             </button>
@@ -242,20 +245,17 @@ function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?:
   );
 }
 
-// ---- Wide screens: the rail on the right ----
+// ---- Wide screens: the glass rail on the right ----
 
-function Badge({ n, dot }: { n?: number; dot?: boolean }) {
-  if (!n) return null;
-  if (dot) {
-    return (
-      <span className="absolute -top-1 -right-1 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-gold-400 px-1 text-[10px] font-semibold text-brand-950 tabular-nums">
-        {n > 99 ? "99+" : n}
-      </span>
-    );
-  }
+function RailIcon({ icon: Icon, active }: { icon: LucideIcon; active: boolean }) {
   return (
-    <span className="ml-auto rounded-full bg-gold-400 px-2 py-0.5 text-xs font-semibold text-brand-950 tabular-nums">
-      {n > 99 ? "99+" : n}
+    <span
+      aria-hidden
+      className={`grid h-8 w-8 shrink-0 place-items-center rounded-[9px] ${
+        active ? "bg-ink text-white" : "bg-black/[0.05] text-ink"
+      }`}
+    >
+      <Icon size={18} strokeWidth={ICON_STROKE} />
     </span>
   );
 }
@@ -269,22 +269,16 @@ function RailLink({ item, pathname }: { item: NavItem; pathname: string }) {
       aria-current={active ? "page" : undefined}
       aria-label={label}
       title={item.label}
-      className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium max-lg:justify-center max-lg:px-0 ${
-        active
-          ? "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100"
-          : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+      className={`flex min-h-11 items-center gap-3 rounded-[12px] px-2 text-[15px] font-medium max-lg:justify-center max-lg:px-0 ${
+        active ? "glass-strong text-ink" : "border-[0.5px] border-transparent text-zinc-700 hover:bg-black/[0.04] hover:text-ink"
       }`}
     >
-      <span className="relative shrink-0">
-        <item.icon {...ICON} />
-        <span className="lg:hidden">
-          <Badge n={item.badge} dot />
-        </span>
+      <span className="relative">
+        <RailIcon icon={item.icon} active={active} />
+        <CountBadge count={item.badge} className="absolute -top-1.5 -right-1.5 lg:hidden" />
       </span>
       <span className="truncate max-lg:sr-only">{item.label}</span>
-      <span className="max-lg:hidden contents">
-        <Badge n={item.badge} />
-      </span>
+      <CountBadge count={item.badge} className="ml-auto max-lg:hidden" />
     </Link>
   );
 }
@@ -298,7 +292,7 @@ function NavRail({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathn
   return (
     <nav
       aria-label="Club"
-      className="sticky top-0 hidden h-dvh flex-col gap-1 overflow-y-auto border-l border-zinc-200 bg-white px-3 py-4 sm:col-start-2 sm:row-start-1 sm:flex dark:border-zinc-800 dark:bg-zinc-900"
+      className="glass sticky top-0 hidden h-dvh flex-col gap-1 overflow-y-auto rounded-none border-y-0 border-r-0 px-3 py-4 sm:col-start-2 sm:row-start-1 sm:flex"
     >
       <div className="hidden lg:block">
         <ClubSwitcher />
@@ -312,8 +306,8 @@ function NavRail({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathn
         aria-current={reimburseActive ? "page" : undefined}
         aria-label={nav.reimburse.label}
         title={nav.reimburse.label}
-        className={`mt-3 mb-2 flex min-h-11 items-center gap-3 rounded-xl bg-gold-400 px-3 text-sm font-semibold text-brand-950 hover:bg-gold-300 max-lg:justify-center max-lg:px-0 ${
-          reimburseActive ? "ring-2 ring-brand-800 ring-offset-2 ring-offset-white dark:ring-gold-200 dark:ring-offset-zinc-900" : ""
+        className={`mt-3 mb-3 flex min-h-11 items-center justify-center gap-2 rounded-[12px] bg-ink px-3 text-[15px] font-semibold text-white hover:bg-zinc-800 max-lg:px-0 ${
+          reimburseActive ? "ring-2 ring-ink ring-offset-2 ring-offset-white" : ""
         }`}
       >
         <nav.reimburse.icon {...ICON} />
@@ -326,16 +320,16 @@ function NavRail({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathn
 
       {nav.manage.length > 0 && (
         <>
-          <p className="mt-4 mb-1 px-3 text-xs font-medium uppercase tracking-wide text-zinc-500 max-lg:sr-only">Manage</p>
-          <hr className="my-3 border-zinc-200 lg:hidden dark:border-zinc-800" />
+          <p className="mt-5 mb-1 px-2 text-[12px] font-semibold tracking-wide text-muted uppercase max-lg:sr-only">Manage</p>
+          <hr className="my-3 border-black/[0.08] lg:hidden" />
           {nav.manage.map((item) => (
             <RailLink key={item.key} item={item} pathname={pathname} />
           ))}
         </>
       )}
 
-      <div className="mt-auto flex flex-col gap-1 border-t border-zinc-200 pt-3 dark:border-zinc-800">
-        <p className="truncate px-3 text-sm font-medium max-lg:sr-only" title={name}>
+      <div className="mt-auto flex flex-col gap-1 border-t border-black/[0.08] pt-3">
+        <p className="truncate px-2 text-[13px] font-semibold max-lg:sr-only" title={name}>
           {name}
         </p>
         <button
@@ -343,9 +337,9 @@ function NavRail({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathn
           onClick={logout}
           aria-label="Log out"
           title="Log out"
-          className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 max-lg:justify-center max-lg:px-0 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50"
+          className="flex min-h-11 items-center gap-3 rounded-[12px] px-2 text-[15px] text-zinc-700 hover:bg-black/[0.04] hover:text-ink max-lg:justify-center max-lg:px-0"
         >
-          <LogOut {...ICON} />
+          <RailIcon icon={LogOut} active={false} />
           <span className="max-lg:sr-only">Log out</span>
         </button>
       </div>
@@ -353,47 +347,54 @@ function NavRail({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathn
   );
 }
 
-// ---- Phones: top bar, bottom tab bar, and the "More" sheet ----
+// ---- Phones: top bar, floating pill tab bar, and the "More" sheet ----
 
 function TopBar() {
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-200/70 bg-[color-mix(in_oklab,var(--background)_88%,transparent)] pt-[env(safe-area-inset-top)] backdrop-blur sm:hidden dark:border-zinc-800/70">
-      <div className="px-2 py-1.5">
+    <header className="glass sticky top-0 z-30 rounded-none border-x-0 border-t-0 pt-[env(safe-area-inset-top)] sm:hidden">
+      <div className="px-2 py-1">
         <ClubSwitcher withLogout />
       </div>
     </header>
   );
 }
 
-const tabClass = (active: boolean) =>
-  `flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-medium ${
-    active ? "text-brand-800 dark:text-brand-200" : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-  }`;
-
-function TabIcon({ item, active }: { item: NavItem; active: boolean }) {
+function TabButton({ item, active }: { item: NavItem; active: boolean }) {
   return (
-    <span
-      className={`relative grid h-7 w-12 place-items-center rounded-full ${active ? "bg-brand-100 dark:bg-brand-900" : ""}`}
-    >
-      <item.icon {...ICON} />
-      <Badge n={item.badge} dot />
-    </span>
+    <>
+      <span className="relative grid h-7 place-items-center">
+        <item.icon size={22} strokeWidth={active ? 2.1 : ICON_STROKE} aria-hidden />
+        <CountBadge count={item.badge} className="absolute -top-1 -right-2.5" />
+      </span>
+      <span aria-hidden className="text-[10px] leading-none font-semibold">
+        {item.short ?? item.label}
+      </span>
+    </>
   );
 }
 
+const tabClass = (active: boolean) =>
+  `flex min-h-12 w-full flex-col items-center justify-center gap-1 rounded-full px-1 ${
+    active ? "bg-black/[0.07] text-ink" : "text-zinc-500 hover:text-ink"
+  }`;
+
 function TabBar({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathname: string }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const moreButton = useRef<HTMLButtonElement>(null);
+  const { logout } = usePrivy();
   const moreActive = nav.more.some((i) => i.match(pathname));
   const cols = nav.tabs.length + (nav.isTreasurer ? 1 : 0);
+  const more: NavItem = { key: "more", href: "", label: "More", icon: Ellipsis, match: () => false };
 
   return (
     <>
       <nav
         aria-label="Club"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden dark:border-zinc-800 dark:bg-zinc-900/95"
+        className="fixed inset-x-3 bottom-[calc(0.5rem+env(safe-area-inset-bottom))] z-30 sm:hidden"
       >
-        <ul className="grid px-1 pt-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        <ul
+          className="glass grid gap-0.5 rounded-full p-1"
+          style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, background: "rgb(255 255 255 / 0.72)" }}
+        >
           {nav.tabs.map((item) => {
             const active = item.match(pathname);
             return (
@@ -404,8 +405,7 @@ function TabBar({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathna
                   aria-label={item.badge ? `${item.label} (${item.badge} waiting)` : item.label}
                   className={tabClass(active)}
                 >
-                  <TabIcon item={item} active={active} />
-                  <span aria-hidden>{item.short ?? item.label}</span>
+                  <TabButton item={item} active={active} />
                 </Link>
               </li>
             );
@@ -413,110 +413,52 @@ function TabBar({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathna
           {nav.isTreasurer && (
             <li>
               <button
-                ref={moreButton}
                 type="button"
                 onClick={() => setMoreOpen(true)}
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
-                className={`w-full ${tabClass(moreActive)}`}
+                aria-label="More"
+                className={tabClass(moreActive)}
               >
-                <TabIcon item={{ key: "more", href: "", label: "More", icon: Ellipsis, match: () => false }} active={moreActive} />
-                <span>More</span>
+                <TabButton item={more} active={moreActive} />
               </button>
             </li>
           )}
         </ul>
       </nav>
       {moreOpen && (
-        <MoreSheet
-          items={nav.more}
-          pathname={pathname}
-          onClose={() => {
-            setMoreOpen(false);
-            moreButton.current?.focus();
-          }}
-        />
+        <Sheet title="More" side={false} onClose={() => setMoreOpen(false)}>
+          <ul className="glass divide-y divide-black/[0.06] overflow-hidden rounded-[16px]">
+            {nav.more.map((item) => {
+              const active = item.match(pathname);
+              return (
+                <li key={item.key}>
+                  <Link
+                    href={item.href}
+                    onClick={() => setMoreOpen(false)}
+                    aria-current={active ? "page" : undefined}
+                    className="flex min-h-12 items-center gap-3 px-3 text-[15px] font-medium hover:bg-black/[0.03]"
+                  >
+                    <RailIcon icon={item.icon} active={active} />
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="glass mt-4 rounded-[16px] p-2">
+            <ClubMenu onNavigate={() => setMoreOpen(false)} plain />
+            <button
+              type="button"
+              onClick={logout}
+              className="flex min-h-11 w-full items-center gap-3 rounded-[10px] px-3 text-left text-[15px] text-zinc-700 hover:bg-black/[0.04]"
+            >
+              <LogOut {...ICON} />
+              Log out
+            </button>
+          </div>
+        </Sheet>
       )}
     </>
-  );
-}
-
-function MoreSheet({ items, pathname, onClose }: { items: NavItem[]; pathname: string; onClose: () => void }) {
-  const { logout } = usePrivy();
-  const panel = useRef<HTMLDivElement>(null);
-  const closeRef = useRef(onClose);
-  useEffect(() => {
-    closeRef.current = onClose;
-  }, [onClose]);
-
-  // Focus the first link when the sheet opens; Escape closes it.
-  useEffect(() => {
-    panel.current?.querySelector<HTMLElement>("ul a")?.focus();
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 sm:hidden">
-      <button
-        type="button"
-        aria-label="Close"
-        tabIndex={-1}
-        onClick={onClose}
-        className="absolute inset-0 bg-zinc-950/40 active:transform-none"
-      />
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-label="More"
-        className="sheet-up absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-3xl bg-white px-3 pt-2 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-[0_-12px_40px_-12px_rgb(13_18_16/0.3)] dark:bg-zinc-900"
-      >
-        <div className="flex items-center justify-between px-2 py-2">
-          <p className="font-display text-lg font-semibold">More</p>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="grid h-11 w-11 place-items-center rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <X {...ICON} />
-          </button>
-        </div>
-        <ul className="flex flex-col gap-1">
-          {items.map((item) => {
-            const active = item.match(pathname);
-            return (
-              <li key={item.key}>
-                <Link
-                  href={item.href}
-                  onClick={onClose}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-12 items-center gap-3 rounded-xl px-3 font-medium ${
-                    active
-                      ? "bg-brand-100 text-brand-800 dark:bg-brand-900 dark:text-brand-100"
-                      : "hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                  }`}
-                >
-                  <item.icon {...ICON} />
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-        <hr className="my-3 border-zinc-200 dark:border-zinc-800" />
-        <ClubMenu onNavigate={onClose} plain />
-        <button
-          type="button"
-          onClick={logout}
-          className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
-        >
-          <LogOut {...ICON} />
-          Log out
-        </button>
-      </div>
-    </div>
   );
 }

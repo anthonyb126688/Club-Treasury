@@ -107,10 +107,10 @@ export default function BudgetPage() {
       )}
 
       <Link
-        href={`/c/${orgId}/ledger`}
+        href={`/c/${orgId}/activity`}
         className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-center font-medium hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-900"
       >
-        See every payment on the ledger
+        See every payment in Activity
       </Link>
     </main>
   );

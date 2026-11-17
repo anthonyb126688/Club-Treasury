@@ -61,7 +61,7 @@ export function LedgerView({ embedded = false }: { embedded?: boolean }) {
     <main className={embedded ? memberPage : "mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pt-6 pb-12"}>
       {embedded ? (
         <PageHeader
-          title="Ledger"
+          title="Activity"
           subtitle="Every dollar that comes in or goes out of the club. Tap Verify to see the public record."
           action={
             <Link href={`/ledger/${orgId}`} className={headerAction}>
