@@ -1,15 +1,14 @@
 // Put starting funds into a club's vault and record it on that club's public
-// ledger as a deposit. Test dollars only (devnet).
+// ledger as a deposit. Test dollars only (devnet). New clubs get this
+// automatically when created; this is for older clubs or a failed attempt.
 //   npm run deposit-starting-funds                      → demo club, $1,000
 //   npm run deposit-starting-funds -- --club=<id> --amount=500
 // Safe to re-run: skips if the club already has a starting-funds deposit.
 process.loadEnvFile(".env.local");
 
-const { db } = await import("@/lib/db");
 const { formatCents } = await import("@/lib/money");
 const { DEFAULT_ORG_ID, loadOrg } = await import("@/lib/orgs/orgs");
-const { clubHolderAddress } = await import("@/lib/solana/squads");
-const { depositToTreasury } = await import("@/lib/solana/transfer");
+const { giveStartingFunds } = await import("@/lib/orgs/starting-funds");
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const club = await loadOrg(arg("club") ?? DEFAULT_ORG_ID);
@@ -23,36 +22,15 @@ if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
   process.exit(1);
 }
 
-const { data: existing, error } = await db()
-  .from("ledger_entries")
-  .select("id")
-  .eq("org_id", club.id)
-  .eq("kind", "deposit")
-  .limit(1);
-if (error) throw new Error(`ledger lookup: ${error.message}`);
-if (existing.length > 0) {
-  console.log(`${club.name} already has its starting funds. Nothing to do.`);
-  process.exit(0);
-}
-
-const vault = clubHolderAddress(club);
 console.log(`Depositing ${formatCents(amountCents)} of starting funds into ${club.name}'s vault...`);
-const result = await depositToTreasury(amountCents, `club-treasury:deposit:${club.id}`, vault);
-if (result.status !== "confirmed") {
-  console.log(`Deposit not confirmed yet (${result.status}). Check: ${result.explorerUrl}`);
+const result = await giveStartingFunds(club.id, amountCents);
+if (result.status === "already_funded") {
+  console.log(`${club.name} already has its starting funds. Nothing to do.`);
+} else if (result.status === "not_confirmed") {
+  console.log(`Deposit not confirmed yet. Check: ${result.explorerUrl}`);
   console.log("Not recorded on the ledger. Re-check before re-running to avoid a double deposit.");
   process.exit(1);
+} else {
+  console.log("Done. Recorded on the club's ledger.");
+  console.log("Explorer:", result.explorerUrl);
 }
-
-const { error: insertError } = await db().from("ledger_entries").insert({
-  org_id: club.id,
-  direction: "in",
-  kind: "deposit",
-  amount_cents: amountCents,
-  description: "Starting club funds",
-  signature: result.signature,
-});
-if (insertError) throw new Error(`ledger insert: ${insertError.message}`);
-
-console.log("Done. Recorded on the club's ledger.");
-console.log("Explorer:", result.explorerUrl);

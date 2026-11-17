@@ -145,6 +145,7 @@ Decided (Nov 17):
 * Multi-club: any student club can sign up; one Squads vault per club (no per-club secret keys). Club creator = treasurer; co-treasurers can be added. Join by code, invite link, or QR; the treasurer approves each join request.
 * Each club sets its own dues amount/period, auto-approve cap, daily limit (also changes the on-chain allowance), receipt age limit, and categories with month or semester budgets. "Other" always goes to the treasurer. The AI sorts receipts into the club's categories.
 * Denying a request requires a note, which the member sees.
+* Every new club gets $1,000 of test dollars in its vault right after the vault is set up (`lib/orgs/starting-funds.ts`, on the ledger as "Starting club funds"), so the demo works from a freshly created club.
 * Treasurer dashboard tabs: Needs approval, Paid, Blocked (possible duplicates and failed payouts), Denied.
 * Database changes stay additive while `main` shares the database; `supabase/migrations/20261117000001_multi_club_merge.sql` is applied only when merging.
 

@@ -3,11 +3,13 @@ import { db } from "@/lib/db";
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from "@/lib/policy/rules";
 import { makeJoinCode } from "./join-code";
 import type { Person } from "./orgs";
+import { tryGiveStartingFunds } from "./starting-funds";
 import { createClubVault } from "./vault";
 
 /**
  * Create a club: the creator becomes its treasurer, it gets default
- * settings and categories, and its own Squads vault. Returns the club's id
+ * settings and categories, its own Squads vault, and $1,000 of starting
+ * test dollars in that vault. Returns the club's id
  * and whether the vault is ready (it can be retried with createClubVault).
  */
 export async function createClub(
@@ -64,5 +66,6 @@ export async function createClub(
   await db().from("members").update({ last_org_id: orgId }).eq("privy_user_id", creator.userId);
 
   const vault = await createClubVault(orgId, creator.solanaAddress, DEFAULT_SETTINGS.dailyAutoApproveLimitCents);
+  if (vault === "ready") await tryGiveStartingFunds(orgId);
   return { orgId, vault };
 }
