@@ -47,7 +47,7 @@ export function RequestPanel({
   return (
     <aside
       aria-label="Request details"
-      className="fixed inset-0 z-40 overflow-y-auto bg-white px-4 py-4 dark:bg-zinc-950 lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100vh-2rem)] lg:rounded-2xl lg:border lg:border-zinc-200 lg:dark:border-zinc-800"
+      className="fixed inset-0 z-40 overflow-y-auto overscroll-contain bg-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] dark:bg-zinc-950 lg:sticky lg:pt-4 lg:pb-4 lg:inset-auto lg:top-4 lg:z-auto lg:max-h-[calc(100vh-2rem)] lg:rounded-2xl lg:border lg:border-zinc-200 lg:dark:border-zinc-800"
     >
       <div className="mb-4 flex items-center justify-between gap-2">
         <button type="button" onClick={onClose} className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300">

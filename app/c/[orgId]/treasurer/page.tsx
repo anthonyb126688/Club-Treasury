@@ -6,18 +6,21 @@ import type { TabCode } from "@/lib/dashboard/tabs";
 import type { Overview, RequestDetail, RequestList } from "@/lib/dashboard/types";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
 import { useOrg } from "../../../_components/OrgProvider";
+import { useShell } from "../_components/AppShell";
+import { PageHeader, treasurerPage } from "../_components/PageHeader";
 import { OverviewCards } from "./_components/OverviewCards";
 import { RequestPanel } from "./_components/RequestPanel";
 import { RequestTabs } from "./_components/RequestTabs";
 import { useTreasurerActions, type Target } from "./_components/useTreasurerActions";
 
-// Treasurer dashboard: club numbers at the top, then requests by tab.
+// Approvals (the treasurer dashboard): club numbers at the top, then requests by tab.
 // Tapping a request opens its details (side panel on wide screens, full
 // screen on a phone), where the treasurer approves, denies, or retries.
 export default function TreasurerDashboard() {
   const { orgId } = useOrg();
   const authFetch = useAuthFetch();
   const actions = useTreasurerActions(orgId);
+  const { refreshApprovals } = useShell();
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [overviewFailed, setOverviewFailed] = useState(false);
@@ -124,13 +127,14 @@ export default function TreasurerDashboard() {
       setNotice("That didn't work. Try again.");
     } finally {
       setBusy(false);
+      refreshApprovals(); // the badge in the nav
       await Promise.all([loadOverview(), loadList(tabRef.current), loadDetail(target.id)]);
     }
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+    <main className={treasurerPage}>
+      <PageHeader title="Approvals" />
 
       {overview ? (
         <OverviewCards overview={overview} orgId={orgId} />

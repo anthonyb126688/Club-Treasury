@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { centsToInput, parseDollars } from "@/lib/budget/settings";
 import { perPeriod } from "@/lib/dues/period";
 import { formatCents } from "@/lib/money";
 import { useOrg } from "../../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../../_components/useAuthFetch";
+import { PageHeader, treasurerPage } from "../../_components/PageHeader";
 
 // Budget builder: the club's categories, how much each may spend per month or
 // semester, and what's been spent so far. The reimbursement policy reads
@@ -94,13 +94,8 @@ export default function BudgetPage() {
   const archived = categories?.filter((c) => c.archived) ?? [];
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-12 *:max-w-3xl">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">Budget</h1>
-        <Link href={`/c/${orgId}/treasurer`} className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300">
-          Treasurer
-        </Link>
-      </div>
+    <main className={`${treasurerPage} *:max-w-3xl`}>
+      <PageHeader title="Budget" />
 
       {!isTreasurer || problem === "forbidden" ? (
         <p>This page is for the club treasurer.</p>

@@ -14,6 +14,7 @@ import {
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 import { useOrg } from "../../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../../_components/useAuthFetch";
+import { PageHeader, treasurerPage } from "../../_components/PageHeader";
 
 // Club settings: dues, the instant-payout rules, and the join code. Changes
 // apply to the next receipt the policy checks. The daily limit also lives in
@@ -84,13 +85,8 @@ export default function SettingsPage() {
   }, [isTreasurer, load]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-12 *:max-w-3xl">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">Settings</h1>
-        <Link href={`/c/${orgId}/treasurer`} className="text-sm text-zinc-600 underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:text-zinc-400 dark:decoration-zinc-600 dark:hover:text-brand-300">
-          Treasurer
-        </Link>
-      </div>
+    <main className={`${treasurerPage} *:max-w-3xl`}>
+      <PageHeader title="Settings" />
 
       {!isTreasurer || problem === "forbidden" ? (
         <p>This page is for the club treasurer.</p>

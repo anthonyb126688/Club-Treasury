@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useOrg } from "../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
+import { memberPage, PageHeader } from "../_components/PageHeader";
 
 type BudgetCategory = {
   slug: string;
@@ -44,18 +45,8 @@ export default function BudgetPage() {
   }, [authFetch, orgId]);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-12">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">Club budget</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 break-words">
-            How {club?.name ?? "the club"} is spending its money.
-          </p>
-        </div>
-        <Link href={`/c/${orgId}`} className="shrink-0 rounded-full px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900">
-          Home
-        </Link>
-      </div>
+    <main className={memberPage}>
+      <PageHeader title="Club budget" subtitle={`How ${club?.name ?? "the club"} is spending its money.`} />
 
       {categories === null ? (
         <p className="text-zinc-600 dark:text-zinc-400">
@@ -116,10 +107,10 @@ export default function BudgetPage() {
       )}
 
       <Link
-        href={`/ledger/${orgId}`}
-        className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-center font-medium dark:border-zinc-800"
+        href={`/c/${orgId}/ledger`}
+        className="w-full rounded-xl border border-zinc-200 px-4 py-3 text-center font-medium hover:bg-zinc-100 dark:border-zinc-800 dark:hover:bg-zinc-900"
       >
-        See every payment on the public ledger
+        See every payment on the ledger
       </Link>
     </main>
   );

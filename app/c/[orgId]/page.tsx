@@ -6,13 +6,13 @@ import { DuesCard } from "../../_components/DuesCard";
 import { useOrg } from "../../_components/OrgProvider";
 import { ReimbursementHistory } from "../../_components/ReimbursementHistory";
 import { useAuthFetch } from "../../_components/useAuthFetch";
-import { ClubLinks } from "./_components/ClubLinks";
+import { memberPage, PageHeader } from "./_components/PageHeader";
 
 // A club's home for members (phone-first): club name, my balance, dues,
-// a big Get reimbursed button, my requests, and links to the budget,
-// the public ledger and (for treasurers) the treasurer area.
+// a big Get reimbursed button, and my requests. Budget, ledger and the
+// treasurer pages are in the app shell's navigation.
 export default function ClubHome() {
-  const { orgId, club, isTreasurer } = useOrg();
+  const { orgId, club, me, isTreasurer } = useOrg();
   const authFetch = useAuthFetch();
   const [balance, setBalance] = useState<string | null>(null);
   const [clubBalance, setClubBalance] = useState<string | null>(null);
@@ -35,7 +35,8 @@ export default function ClubHome() {
   }, [authFetch, reloadKey]);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-5 px-4 pb-12">
+    <main className={memberPage}>
+      <PageHeader title={me?.firstName ? `Hi, ${me.firstName}` : "Home"} />
       {/* The club card: who you're with, and where the money stands. */}
       <section className="relative overflow-hidden rounded-3xl bg-brand-700 p-5 text-white shadow-[0_18px_40px_-20px_rgb(17_51_39/0.7)] dark:bg-brand-800">
         <svg viewBox="0 0 64 48" aria-hidden className="pointer-events-none absolute top-5 right-0 h-12 w-16">
@@ -49,7 +50,7 @@ export default function ClubHome() {
             </span>
             {club?.school && <span className="truncate">{club.school}</span>}
           </p>
-          <h1 className="mt-2 max-w-[80%] text-2xl font-semibold break-words">{club?.name}</h1>
+          <h2 className="mt-2 max-w-[80%] text-2xl font-semibold break-words">{club?.name}</h2>
         </div>
         <dl className="relative mt-8 grid grid-cols-2 gap-4">
           <div>
@@ -82,8 +83,6 @@ export default function ClubHome() {
       <DuesCard orgId={orgId} onPaid={reload} onClubBalance={setClubBalance} refreshKey={reloadKey} />
 
       <ReimbursementHistory orgId={orgId} onChange={reload} />
-
-      <ClubLinks orgId={orgId} isTreasurer={isTreasurer} />
     </main>
   );
 }

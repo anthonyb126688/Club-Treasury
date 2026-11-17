@@ -24,6 +24,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  // Lets pages pad around the iPhone home bar with env(safe-area-inset-*).
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f6f8f6" },
     { media: "(prefers-color-scheme: dark)", color: "#0d1210" },

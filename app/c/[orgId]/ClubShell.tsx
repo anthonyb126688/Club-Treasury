@@ -4,10 +4,10 @@ import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
-import { AppHeader } from "../../_components/AppHeader";
 import { LoadingScreen } from "../../_components/Mark";
 import { OrgProvider, useOrg } from "../../_components/OrgProvider";
 import { useAuthFetch } from "../../_components/useAuthFetch";
+import { AppShell } from "./_components/AppShell";
 
 // Every page inside a club (/c/[orgId]/...): must be logged in and an active
 // member. The server checks this again on every request; this is just so
@@ -27,10 +27,9 @@ export function ClubShell({ children }: { children: ReactNode }) {
 
   return (
     <OrgProvider orgId={orgId}>
-      <AppHeader />
-      <div className="flex flex-1 flex-col pt-5">
-        <MembersOnly>{children}</MembersOnly>
-      </div>
+      <MembersOnly>
+        <AppShell>{children}</AppShell>
+      </MembersOnly>
     </OrgProvider>
   );
 }

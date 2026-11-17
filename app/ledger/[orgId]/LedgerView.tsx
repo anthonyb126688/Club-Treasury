@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import type { LedgerItem } from "@/lib/ledger/view";
+import { headerAction, memberPage, PageHeader } from "../../c/[orgId]/_components/PageHeader";
 import { Mark } from "../../_components/Mark";
 
 type LedgerResponse = {
@@ -17,8 +18,9 @@ type LedgerResponse = {
 const REFRESH_MS = 5000;
 
 // Public ledger: every dollar in and out, newest first. Refreshes itself
-// every few seconds so new dues show up without reloading.
-export function LedgerView() {
+// every few seconds so new dues show up without reloading. `embedded` is the
+// same view inside the club's app shell (/c/[orgId]/ledger).
+export function LedgerView({ embedded = false }: { embedded?: boolean }) {
   const { orgId } = useParams<{ orgId: string }>();
   const { ready, authenticated, getAccessToken } = usePrivy();
   const [data, setData] = useState<LedgerResponse | null>(null);
@@ -56,26 +58,40 @@ export function LedgerView() {
   }, [ready, authenticated, getAccessToken, orgId]);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pt-6 pb-12">
-      <div className="flex items-center justify-between gap-3">
-        <Link href={authenticated ? `/c/${orgId}` : "/"} aria-label="Club Treasury home">
-          <Mark />
-        </Link>
-        <Link
-          href={authenticated ? `/c/${orgId}` : "/"}
-          className="shrink-0 rounded-full px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
-        >
-          Home
-        </Link>
-      </div>
+    <main className={embedded ? memberPage : "mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pt-6 pb-12"}>
+      {embedded ? (
+        <PageHeader
+          title="Ledger"
+          subtitle="Every dollar that comes in or goes out of the club. Tap Verify to see the public record."
+          action={
+            <Link href={`/ledger/${orgId}`} className={headerAction}>
+              Public page
+            </Link>
+          }
+        />
+      ) : (
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <Link href={authenticated ? `/c/${orgId}` : "/"} aria-label="Club Treasury home">
+              <Mark />
+            </Link>
+            <Link
+              href={authenticated ? `/c/${orgId}` : "/"}
+              className="shrink-0 rounded-full px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
+            >
+              Home
+            </Link>
+          </div>
 
-      <div>
-        <p className="truncate text-zinc-600 dark:text-zinc-400">{data?.club.name ?? "\u00a0"}</p>
-        <h1 className="text-4xl font-semibold">Public ledger</h1>
-        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          Every dollar that comes in or goes out of the club. Tap Verify to see the public record.
-        </p>
-      </div>
+          <div>
+            <p className="truncate text-zinc-600 dark:text-zinc-400">{data?.club.name ?? "\u00a0"}</p>
+            <h1 className="text-4xl font-semibold">Public ledger</h1>
+            <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+              Every dollar that comes in or goes out of the club. Tap Verify to see the public record.
+            </p>
+          </div>
+        </>
+      )}
 
       {data?.vaultUrl && (
         <a

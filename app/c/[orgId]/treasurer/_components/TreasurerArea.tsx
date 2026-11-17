@@ -1,74 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { useOrg } from "../../../../_components/OrgProvider";
+import { memberPage, PageHeader } from "../../_components/PageHeader";
 
-// The treasurer-area nav, shown above every treasurer page. Pages render
-// below it and set their own width.
+// Wraps every treasurer page: a friendly message for anyone who isn't this
+// club's treasurer. Navigation lives in the app shell.
 export function TreasurerArea({ children }: { children: ReactNode }) {
   const { orgId, isTreasurer } = useOrg();
-  const pathname = usePathname();
-  const base = `/c/${orgId}/treasurer`;
 
   if (!isTreasurer) {
     return (
-      <main className="mx-auto flex max-w-md flex-col gap-4 px-4 py-12">
-        <h1 className="text-2xl font-semibold tracking-tight">Treasurers only</h1>
+      <main className={memberPage}>
+        <PageHeader title="Treasurers only" />
         <p className="text-zinc-600 dark:text-zinc-400">
           This part of the app is for the club&apos;s treasurer. You can still pay dues and get reimbursed from
-          the member view.
+          Home.
         </p>
         <Link
           href={`/c/${orgId}`}
-          className="self-start rounded-xl bg-brand-600 hover:bg-brand-700 px-4 py-3 font-medium text-white dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
+          className="self-start rounded-xl bg-brand-600 px-4 py-3 font-medium text-white hover:bg-brand-700 dark:bg-brand-400 dark:text-brand-950 dark:hover:bg-brand-300"
         >
-          Go to member view
+          Go home
         </Link>
       </main>
     );
   }
 
-  const links = [
-    { href: base, label: "Dashboard", exact: true },
-    { href: `${base}/members`, label: "Members" },
-    { href: `${base}/budget`, label: "Budget" },
-    { href: `${base}/settings`, label: "Settings" },
-  ];
-  const isActive = (href: string, exact?: boolean) =>
-    exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
-
-  return (
-    <>
-      <nav aria-label="Treasurer" className="mx-auto w-full max-w-5xl px-4 pb-4">
-        <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] rounded-2xl bg-zinc-100 p-1 text-sm dark:bg-zinc-900">
-          {links.map((l) => {
-            const active = isActive(l.href, l.exact);
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                aria-current={active ? "page" : undefined}
-                className={`shrink-0 rounded-xl px-3 py-2 font-medium ${
-                  active
-                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-                }`}
-              >
-                {l.label}
-              </Link>
-            );
-          })}
-          <Link
-            href={`/c/${orgId}`}
-            className="ml-auto shrink-0 rounded-xl px-3 py-2 text-zinc-600 underline hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-          >
-            Member view
-          </Link>
-        </div>
-      </nav>
-      {children}
-    </>
-  );
+  return <>{children}</>;
 }

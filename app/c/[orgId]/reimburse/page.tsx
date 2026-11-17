@@ -7,6 +7,7 @@ import type { Category } from "@/lib/policy/rules";
 import { parseDollarsToCents } from "@/lib/reimburse/decide";
 import { useOrg } from "../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../_components/useAuthFetch";
+import { headerAction, memberPage, PageHeader } from "../_components/PageHeader";
 import { StepBar } from "../_components/StepBar";
 import { shrinkPhoto } from "./shrink-photo";
 
@@ -97,16 +98,17 @@ export default function ReimbursePage() {
     (parseDollarsToCents(amount) !== step.reading.totalCents || category !== step.reading.category);
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-4 pb-12">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Get reimbursed</h1>
-        <Link
-          href={`/c/${orgId}`}
-          className="shrink-0 rounded-full px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900"
-        >
-          Cancel
-        </Link>
-      </div>
+    <main className={memberPage}>
+      <PageHeader
+        title="Get reimbursed"
+        action={
+          step.name !== "done" && (
+            <Link href={`/c/${orgId}`} className={headerAction}>
+              Cancel
+            </Link>
+          )
+        }
+      />
 
       {step.name === "pick" ? (
         <div className="flex flex-col gap-4">

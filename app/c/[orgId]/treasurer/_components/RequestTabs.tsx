@@ -113,20 +113,20 @@ export function RequestTabs({
                   type="button"
                   onClick={() => onSelect(r.id)}
                   aria-current={r.id === selectedId ? "true" : undefined}
-                  className={`grid w-full grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900 sm:grid-cols-[1fr_7rem_6rem_9rem] ${
+                  className={`grid min-h-14 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-zinc-50 dark:hover:bg-zinc-900 sm:grid-cols-[minmax(0,1fr)_7rem_6rem_9rem] ${
                     r.id === selectedId ? "bg-zinc-100 dark:bg-zinc-900" : ""
                   }`}
                 >
-                  <span className="min-w-0">
+                  <span className="row-span-2 min-w-0 sm:row-span-1">
                     <span className="block truncate font-medium">{r.memberName}</span>
                     {/* Receipt-derived text: plain text only. */}
                     <span className="block truncate text-sm text-zinc-600 dark:text-zinc-400">
                       {r.vendor ?? "Unknown store"} · {r.category}
                     </span>
                   </span>
-                  <span className="text-right font-semibold tabular-nums sm:order-none">{r.amount}</span>
-                  <span className="text-sm text-zinc-600 dark:text-zinc-400">{shortDate(r.date)}</span>
-                  <span className="text-right sm:text-left">
+                  <span className="text-right font-semibold tabular-nums">{r.amount}</span>
+                  <span className="hidden text-sm text-zinc-600 sm:block dark:text-zinc-400">{shortDate(r.date)}</span>
+                  <span className="col-start-2 text-right sm:col-start-auto sm:text-left">
                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLE[r.status] ?? "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"}`}>
                       {r.statusLabel}
                     </span>

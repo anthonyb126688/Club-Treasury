@@ -1,12 +1,14 @@
 "use client";
 
 import { useSignTransaction } from "@privy-io/react-auth/solana";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 import { useOrg } from "../../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../../_components/useAuthFetch";
+import { PageHeader, treasurerPage } from "../../_components/PageHeader";
 
 type Person = {
   userId: string;
@@ -51,6 +53,8 @@ export default function MembersPage() {
   const [busy, setBusy] = useState<{ userId: string; label: string } | null>(null);
   const [confirm, setConfirm] = useState<{ userId: string; action: Action } | null>(null);
   const [notice, setNotice] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null); // phones: the person shown full screen
+  const closeSheet = useCallback(() => setOpenId(null), []);
 
   const load = useCallback(async () => {
     try {
@@ -159,7 +163,7 @@ export default function MembersPage() {
 
   if (problem === "forbidden") {
     return (
-      <main className="mx-auto w-full max-w-5xl px-4 py-6">
+      <main className={treasurerPage}>
         <p>
           This page is for the club treasurer.{" "}
           <Link href={`/c/${orgId}`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
@@ -173,21 +177,27 @@ export default function MembersPage() {
   const pending = data?.people.filter((p) => p.status === "pending") ?? [];
   const active = data?.people.filter((p) => p.status === "active") ?? [];
   const treasurerCount = active.filter((p) => p.role === "treasurer").length;
+  const openPerson = active.find((p) => p.userId === openId) ?? null;
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-6 px-4 pb-12">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Members</h1>
-        {data && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Join code <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{data.joinCode}</span>{" "}
-            ·{" "}
-            <Link href={`/c/${orgId}/treasurer/settings`} className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300">
-              Settings
-            </Link>
-          </p>
-        )}
-      </div>
+    <main className={treasurerPage}>
+      <PageHeader
+        title="Members"
+        subtitle={
+          data && (
+            <>
+              Join code{" "}
+              <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100">{data.joinCode}</span> ·{" "}
+              <Link
+                href={`/c/${orgId}/treasurer/settings`}
+                className="underline decoration-zinc-300 underline-offset-4 hover:text-brand-700 hover:decoration-brand-500 dark:decoration-zinc-600 dark:hover:text-brand-300"
+              >
+                Invite link and QR
+              </Link>
+            </>
+          )
+        }
+      />
 
       {notice && (
         <p
@@ -283,6 +293,7 @@ export default function MembersPage() {
                       anyBusy={!!busy}
                       confirming={confirm?.userId === p.userId ? confirm.action : null}
                       onAction={(a) => act(p, a)}
+                      onOpen={() => setOpenId(p.userId)}
                     />
                   ))}
                 </ul>
@@ -291,7 +302,39 @@ export default function MembersPage() {
           </section>
         </>
       )}
+
+      {data && openPerson && (
+        <MemberSheet person={openPerson} periodLabel={data.period.label} notice={notice} onClose={closeSheet}>
+          <MemberActions
+            person={openPerson}
+            onlyTreasurer={treasurerCount <= 1}
+            busyLabel={busy?.userId === openPerson.userId ? busy.label : null}
+            anyBusy={!!busy}
+            confirming={confirm?.userId === openPerson.userId ? confirm.action : null}
+            onAction={(a) => act(openPerson, a)}
+          />
+        </MemberSheet>
+      )}
     </main>
+  );
+}
+
+function roleLabel(p: Person) {
+  if (p.role !== "treasurer") return "Member";
+  return p.isFounder ? "Founder" : "Treasurer";
+}
+
+function RoleBadge({ person: p }: { person: Person }) {
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+        p.role === "treasurer"
+          ? "bg-brand-600 text-white dark:bg-brand-400 dark:text-brand-950"
+          : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+      }`}
+    >
+      {roleLabel(p)}
+    </span>
   );
 }
 
@@ -303,6 +346,7 @@ function MemberRow({
   anyBusy,
   confirming,
   onAction,
+  onOpen,
 }: {
   person: Person;
   periodLabel: string;
@@ -311,91 +355,208 @@ function MemberRow({
   anyBusy: boolean;
   confirming: Action | null;
   onAction: (a: Action) => void;
+  onOpen: () => void;
+}) {
+  return (
+    <li>
+      {/* Phones: one tappable row (name, amount, status) that opens the person full screen. */}
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 md:hidden dark:hover:bg-zinc-800/60"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-semibold">
+            {p.name}
+            {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
+          </span>
+          <span className="block truncate text-sm text-zinc-600 dark:text-zinc-400">
+            {roleLabel(p)} · {p.duesPaidThisPeriod ? "Dues paid" : "Dues not paid"}
+          </span>
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block font-semibold tabular-nums">{p.totalReimbursed}</span>
+          <span className="block text-xs text-zinc-500">reimbursed</span>
+        </span>
+        <ChevronRight size={18} strokeWidth={1.75} aria-hidden className="shrink-0 text-zinc-400" />
+      </button>
+
+      {/* Wider screens: a table row with the actions inline. */}
+      <div className="hidden flex-col gap-3 px-4 py-3 md:flex">
+        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] items-center gap-x-3 text-sm">
+          <p className="truncate font-semibold">
+            {p.name}
+            {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
+          </p>
+          <p className="truncate text-zinc-600 dark:text-zinc-400">{p.email ?? "No email"}</p>
+          <p>
+            <RoleBadge person={p} />
+          </p>
+          <p className={p.duesPaidThisPeriod ? "text-brand-700 dark:text-brand-300" : "text-zinc-600 dark:text-zinc-400"}>
+            {p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}
+            <span className="sr-only"> ({periodLabel})</span>
+          </p>
+          <p className="text-right tabular-nums">{p.totalReimbursed}</p>
+        </div>
+        <MemberActions
+          person={p}
+          onlyTreasurer={onlyTreasurer}
+          busyLabel={busyLabel}
+          anyBusy={anyBusy}
+          confirming={confirming}
+          onAction={onAction}
+        />
+      </div>
+    </li>
+  );
+}
+
+// Phones: one person, full screen, with what the treasurer can do.
+function MemberSheet({
+  person: p,
+  periodLabel,
+  notice,
+  onClose,
+  children,
+}: {
+  person: Person;
+  periodLabel: string;
+  notice: { text: string; tone: "ok" | "error" } | null;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={p.name}
+      className="fixed inset-0 z-40 flex flex-col gap-5 overflow-y-auto overscroll-contain bg-white px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:hidden dark:bg-zinc-950"
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        autoFocus
+        className="flex min-h-11 items-center gap-2 self-start rounded-full pr-3 text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+      >
+        <ArrowLeft size={18} strokeWidth={1.75} aria-hidden />
+        Back to members
+      </button>
+
+      <div className="flex flex-col items-start gap-2">
+        <h2 className="text-2xl font-semibold break-words">
+          {p.name}
+          {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
+        </h2>
+        <p className="text-sm break-all text-zinc-600 dark:text-zinc-400">{p.email ?? "No email"}</p>
+        <RoleBadge person={p} />
+      </div>
+
+      <dl className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-zinc-100 p-3 dark:bg-zinc-900">
+          <dt className="text-sm text-zinc-600 dark:text-zinc-400">Dues · {periodLabel}</dt>
+          <dd className={`mt-1 font-semibold ${p.duesPaidThisPeriod ? "text-brand-700 dark:text-brand-300" : ""}`}>
+            {p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}
+          </dd>
+        </div>
+        <div className="rounded-2xl bg-zinc-100 p-3 dark:bg-zinc-900">
+          <dt className="text-sm text-zinc-600 dark:text-zinc-400">Reimbursed</dt>
+          <dd className="mt-1 font-display text-xl font-semibold tabular-nums">{p.totalReimbursed}</dd>
+        </div>
+      </dl>
+
+      {notice && (
+        <p
+          role="status"
+          className={`rounded-xl px-4 py-3 text-sm ${
+            notice.tone === "ok" ? "bg-zinc-100 dark:bg-zinc-900" : "bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200"
+          }`}
+        >
+          {notice.text}
+        </p>
+      )}
+
+      {children}
+    </div>
+  );
+}
+
+// What the treasurer can do with one person (same buttons in the table row and the phone sheet).
+function MemberActions({
+  person: p,
+  onlyTreasurer,
+  busyLabel,
+  anyBusy,
+  confirming,
+  onAction,
+}: {
+  person: Person;
+  onlyTreasurer: boolean;
+  busyLabel: string | null;
+  anyBusy: boolean;
+  confirming: Action | null;
+  onAction: (a: Action) => void;
 }) {
   const treasurer = p.role === "treasurer";
   return (
-    <li className="flex flex-col gap-3 px-4 py-3">
-      <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm md:grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] md:items-center">
-        <p className="col-span-2 truncate text-base font-semibold md:col-span-1 md:text-sm">
-          {p.name}
-          {p.isYou && <span className="font-normal text-zinc-500"> (you)</span>}
-        </p>
-        <p className="col-span-2 truncate text-zinc-600 md:col-span-1 dark:text-zinc-400">{p.email ?? "No email"}</p>
-        <p>
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              treasurer
-                ? "bg-brand-600 hover:bg-brand-700 text-white dark:bg-brand-400 dark:hover:bg-brand-300 dark:text-brand-950"
-                : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-            }`}
-          >
-            {p.isFounder && treasurer ? "Founder" : treasurer ? "Treasurer" : "Member"}
-          </span>
-        </p>
-        <p className={p.duesPaidThisPeriod ? "text-brand-700 dark:text-brand-300" : "text-zinc-600 dark:text-zinc-400"}>
-          {p.duesPaidThisPeriod ? "✓ Paid" : "Not paid"}
-          <span className="text-zinc-500 md:hidden"> · {periodLabel}</span>
-        </p>
-        <p className="tabular-nums md:text-right">
-          <span className="text-zinc-500 md:hidden">Reimbursed </span>
-          {p.totalReimbursed}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {busyLabel ? (
-          <span className="py-2 text-sm text-zinc-600 dark:text-zinc-400">{busyLabel}</span>
-        ) : treasurer ? (
-          <>
-            {p.isFounder && !p.isYou ? (
-              <span className="py-1 text-xs text-zinc-500">Founded the club. Only they can step down.</span>
-            ) : onlyTreasurer ? (
-              <span className="py-1 text-xs text-zinc-500">
-                The only treasurer. Make someone else co-treasurer before stepping down.
-              </span>
-            ) : (
-              <>
+    <div className="flex flex-wrap gap-2">
+      {busyLabel ? (
+        <span className="py-2 text-sm text-zinc-600 dark:text-zinc-400">{busyLabel}</span>
+      ) : treasurer ? (
+        <>
+          {p.isFounder && !p.isYou ? (
+            <span className="py-1 text-xs text-zinc-500">Founded the club. Only they can step down.</span>
+          ) : onlyTreasurer ? (
+            <span className="py-1 text-xs text-zinc-500">
+              The only treasurer. Make someone else co-treasurer before stepping down.
+            </span>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled={anyBusy}
+                onClick={() => onAction("demote")}
+                className={confirming === "demote" ? danger : outline}
+              >
+                {confirming === "demote"
+                  ? "Tap to confirm"
+                  : p.isYou
+                    ? "Step down as treasurer"
+                    : "Make regular member"}
+              </button>
+              {!p.isYou && (
                 <button
                   type="button"
                   disabled={anyBusy}
-                  onClick={() => onAction("demote")}
-                  className={confirming === "demote" ? danger : outline}
+                  onClick={() => onAction("demote_remove")}
+                  className={confirming === "demote_remove" ? danger : outline}
                 >
-                  {confirming === "demote"
-                    ? "Tap to confirm"
-                    : p.isYou
-                      ? "Step down as treasurer"
-                      : "Make regular member"}
+                  {confirming === "demote_remove" ? "Tap to remove" : "Remove from club"}
                 </button>
-                {!p.isYou && (
-                  <button
-                    type="button"
-                    disabled={anyBusy}
-                    onClick={() => onAction("demote_remove")}
-                    className={confirming === "demote_remove" ? danger : outline}
-                  >
-                    {confirming === "demote_remove" ? "Tap to remove" : "Remove from club"}
-                  </button>
-                )}
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <button type="button" disabled={anyBusy} onClick={() => onAction("promote")} className={primary}>
-              Make co-treasurer
-            </button>
-            <button
-              type="button"
-              disabled={anyBusy}
-              onClick={() => onAction("remove")}
-              className={confirming === "remove" ? danger : outline}
-            >
-              {confirming === "remove" ? "Tap to remove" : "Remove from club"}
-            </button>
-          </>
-        )}
-      </div>
-    </li>
+              )}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <button type="button" disabled={anyBusy} onClick={() => onAction("promote")} className={primary}>
+            Make co-treasurer
+          </button>
+          <button
+            type="button"
+            disabled={anyBusy}
+            onClick={() => onAction("remove")}
+            className={confirming === "remove" ? danger : outline}
+          >
+            {confirming === "remove" ? "Tap to remove" : "Remove from club"}
+          </button>
+        </>
+      )}
+    </div>
   );
 }

@@ -12,13 +12,15 @@ const fromBase64 = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCode
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 
 const item =
-  "block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900";
+  "block w-full rounded-xl px-3 py-2.5 text-left text-sm hover:bg-zinc-100 disabled:opacity-50 dark:hover:bg-zinc-900";
 
 /**
- * The club part of the header menu: switch between your clubs (remembered
- * as your last club), join or create another, and leave this club.
+ * The club part of the nav: switch between your clubs (remembered as your
+ * last club), join or create another, and leave this club. `plain` drops the
+ * menu roles, for use inside the phone "More" sheet instead of a pop-over.
  */
-export function ClubMenu({ onNavigate }: { onNavigate: () => void }) {
+export function ClubMenu({ onNavigate, plain = false }: { onNavigate: () => void; plain?: boolean }) {
+  const role = plain ? undefined : "menuitem";
   const router = useRouter();
   const authFetch = useAuthFetch();
   const { orgId, club, me } = useOrg();
@@ -40,7 +42,7 @@ export function ClubMenu({ onNavigate }: { onNavigate: () => void }) {
             <button
               key={c.id}
               type="button"
-              role="menuitem"
+              role={role}
               onClick={() => switchTo(c.id)}
               disabled={c.id === orgId}
               aria-current={c.id === orgId ? "page" : undefined}
@@ -56,16 +58,16 @@ export function ClubMenu({ onNavigate }: { onNavigate: () => void }) {
           <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
         </>
       )}
-      <Link href="/start" role="menuitem" onClick={onNavigate} className={item}>
+      <Link href="/start" role={role} onClick={onNavigate} className={item}>
         Join or create another club
       </Link>
-      {club && <LeaveClub orgId={orgId} clubName={club.name} />}
+      {club && <LeaveClub orgId={orgId} clubName={club.name} role={role} />}
       <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
     </div>
   );
 }
 
-function LeaveClub({ orgId, clubName }: { orgId: string; clubName: string }) {
+function LeaveClub({ orgId, clubName, role }: { orgId: string; clubName: string; role?: "menuitem" }) {
   const router = useRouter();
   const authFetch = useAuthFetch();
   const account = useMemberAccount();
@@ -130,7 +132,7 @@ function LeaveClub({ orgId, clubName }: { orgId: string; clubName: string }) {
 
   if (!confirming) {
     return (
-      <button type="button" role="menuitem" onClick={() => setConfirming(true)} className={`${item} text-red-600`}>
+      <button type="button" role={role} onClick={() => setConfirming(true)} className={`${item} text-red-600`}>
         Leave club
       </button>
     );
