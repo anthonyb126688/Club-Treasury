@@ -180,3 +180,9 @@ The whole 7-phase brief is built on `main` and tagged phase by phase (`ui-1-toke
 4. The Members-page fix: `p7-demo2-join-request-390.png`.
 5. Before demo day: approve the pending `+test` join request (step 2), and pick a fresh account or club for step 3 (dues are already paid in Test Club). Every fake receipt is now used once, so step 4 needs a new $18 receipt photo (or a new club, where the pizza isn't a duplicate).
 6. When you're happy: push `main` and redeploy (I didn't).
+
+## Reset for testing (Nov 18, afternoon)
+- Deleted "Test Club" and "Test2" (their leftover test dollars stay in their old vaults on devnet; nobody can reach them from the app).
+- "Club Treasury Demo" is a clean slate: only the founder (anthonyb@ku.edu) is a member; the co-treasurer was removed through the Members page, so they're also off the vault on-chain. All requests, dues payments and receipt photos are gone; the ledger keeps only the original "Starting club funds +$1,000". Join code is still CLUB-2026.
+- Club vault and the founder's own balance were topped up to exactly $1,000.00 with new test dollars (no ledger rows for the top-ups).
+- Everyone else's `last_org_id` was cleared, so they land on "Create or join a club" after login. A backup of every deleted row is in the session scratchpad (`reset-backup-nov18.json`).
