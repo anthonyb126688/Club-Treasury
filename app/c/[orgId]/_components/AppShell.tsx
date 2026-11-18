@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ClubMenu } from "../../../_components/ClubSwitcher";
 import { Mark } from "../../../_components/Mark";
 import { useOrg } from "../../../_components/OrgProvider";
@@ -164,20 +165,34 @@ export function AppShell({ children }: { children: ReactNode }) {
 function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?: boolean }) {
   const { club } = useOrg();
   const { logout } = usePrivy();
-  const [open, setOpen] = useState(false);
+  // Where the pop-over sits (fixed, just under the button, right edges lined up).
+  const [spot, setSpot] = useState<{ top: number; right: number } | null>(null);
+  const open = spot !== null;
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const close = () => setSpot(null);
+
+  function toggle() {
+    if (open || !ref.current) return close();
+    const r = ref.current.getBoundingClientRect();
+    setSpot({ top: r.bottom + 8, right: Math.max(8, document.documentElement.clientWidth - r.right) });
+  }
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (!ref.current?.contains(t) && !menuRef.current?.contains(t)) setSpot(null);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSpot(null);
+    const onResize = () => setSpot(null);
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("pointerdown", onDown);
       document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
     };
   }, [open]);
 
@@ -186,7 +201,7 @@ function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?:
     <div ref={ref} className="relative min-w-0">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggle}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={compact ? `${name}: switch club` : undefined}
@@ -206,25 +221,30 @@ function ClubSwitcher({ compact, withLogout }: { compact?: boolean; withLogout?:
           </>
         )}
       </button>
-      {open && (
-        <div
-          role="menu"
-          className="glass absolute top-full right-0 z-50 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-[16px] p-2"
-          style={{ background: "rgb(250 250 252 / 0.95)" }}
-        >
-          <ClubMenu onNavigate={() => setOpen(false)} />
-          {withLogout && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={logout}
-              className="w-full rounded-[10px] px-3 py-2.5 text-left text-sm text-zinc-600 hover:bg-black/[0.05]"
-            >
-              Log out
-            </button>
-          )}
-        </div>
-      )}
+      {/* Rendered on <body>: the side rail scrolls, so it would clip a pop-over wider than itself. */}
+      {spot &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            className="glass fixed z-50 w-72 max-w-[calc(100vw-1rem)] rounded-[16px] p-2"
+            style={{ top: spot.top, right: spot.right, background: "rgb(250 250 252 / 0.95)" }}
+          >
+            <ClubMenu onNavigate={close} />
+            {withLogout && <hr className="my-2 border-black/[0.08]" />}
+            {withLogout && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={logout}
+                className="w-full rounded-[10px] px-3 py-2.5 text-left text-sm text-zinc-600 hover:bg-black/[0.05]"
+              >
+                Log out
+              </button>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
@@ -432,6 +452,7 @@ function TabBar({ nav, pathname }: { nav: ReturnType<typeof useNavItems>; pathna
           </ul>
           <div className="glass mt-4 rounded-[16px] p-2">
             <ClubMenu onNavigate={() => setMoreOpen(false)} plain />
+            <hr className="my-2 border-black/[0.08]" />
             <button
               type="button"
               onClick={logout}

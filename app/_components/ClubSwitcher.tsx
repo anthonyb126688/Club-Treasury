@@ -62,7 +62,6 @@ export function ClubMenu({ onNavigate, plain = false }: { onNavigate: () => void
         Join or create another club
       </Link>
       {club && <LeaveClub orgId={orgId} clubName={club.name} role={role} />}
-      <hr className="my-2 border-zinc-200 dark:border-zinc-800" />
     </div>
   );
 }
