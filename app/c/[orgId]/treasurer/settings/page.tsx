@@ -14,7 +14,7 @@ import {
 import { useMemberAccount } from "@/lib/wallets/useMemberAccount";
 import { useOrg } from "../../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../../_components/useAuthFetch";
-import { PageHeader, treasurerPage } from "../../_components/PageHeader";
+import { PageHeader, treasurerFormPage } from "../../_components/PageHeader";
 
 // Club settings: dues, the instant-payout rules, and the join code. Changes
 // apply to the next receipt the policy checks. The daily limit also lives in
@@ -86,7 +86,7 @@ export default function SettingsPage() {
   }, [isTreasurer, load]);
 
   return (
-    <main className={`${treasurerPage} *:max-w-3xl`}>
+    <main className={treasurerFormPage}>
       <PageHeader title="Settings" />
 
       {!isTreasurer || problem === "forbidden" ? (
@@ -300,7 +300,7 @@ function SettingsForm({
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className={primaryButton}
+            className={`${primaryButton} max-sm:w-full`}
             disabled={saving || !formValid || Object.keys(changes).length === 0}
             onClick={save}
           >
@@ -450,39 +450,35 @@ function JoinCodeSection({
       </p>
       <div className="glass flex flex-col gap-4 rounded-[16px] p-4 sm:flex-row sm:items-center sm:p-5">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-1">
             <span className="font-mono text-3xl font-semibold tracking-wider">{joinCode}</span>
+            {link && <span className="min-w-0 text-[13px] break-all text-muted">{link}</span>}
+          </div>
+          <div className="flex flex-wrap gap-2">
             <button type="button" className={secondaryButton} onClick={() => copy("code", joinCode)}>
               {copied === "code" ? "Copied" : "Copy code"}
             </button>
-          </div>
-          {link && (
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="min-w-0 break-all text-[13px] text-zinc-700">{link}</span>
+            {link && (
               <button type="button" className={secondaryButton} onClick={() => copy("link", link)}>
                 {copied === "link" ? "Copied" : "Copy link"}
               </button>
-            </div>
-          )}
-          <div className="flex flex-col gap-1">
+            )}
             <button
               type="button"
               className={
                 confirm
-                  ? "self-start inline-flex min-h-11 items-center justify-center rounded-[12px] bg-alert px-4 text-[15px] font-semibold text-white disabled:opacity-40"
-                  : `self-start ${secondaryButton}`
+                  ? "inline-flex min-h-11 items-center justify-center rounded-[12px] bg-alert px-4 text-[15px] font-semibold text-white disabled:opacity-40"
+                  : secondaryButton
               }
               disabled={busy}
               onClick={regenerate}
             >
               {busy ? "Making a new code…" : confirm ? "Tap again to replace the code" : "Make a new code"}
             </button>
-            {confirm && (
-              <span className="text-[13px] text-warn-text">
-                The current code and invite link will stop working.
-              </span>
-            )}
           </div>
+          {confirm && (
+            <span className="text-[13px] text-warn-text">The current code and invite link will stop working.</span>
+          )}
         </div>
         {qr && (
           // eslint-disable-next-line @next/next/no-img-element -- a data: URL, nothing to optimize

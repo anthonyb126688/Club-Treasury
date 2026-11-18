@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChartEmpty, DataTable, growStyle, Tooltip } from "./common";
+import { ChartEmpty, DataTable, growStyle, Tooltip, useChartWidth } from "./common";
 
 export type Bar = { key: string; label: string; value: number; valueText: string; partial?: boolean };
 
-const W = 320;
-const H = 150;
+const H = 170;
 const PAD_B = 22; // room for month labels
 const PAD_T = 8;
 
@@ -24,16 +23,17 @@ export function BarChart({
   emptyText: string;
 }) {
   const [active, setActive] = useState<number | null>(null);
+  const [ref, W] = useChartWidth();
   if (bars.length === 0 || bars.every((b) => b.value === 0)) return <ChartEmpty text={emptyText} />;
 
   const max = Math.max(1, ...bars.map((b) => b.value), budget?.value ?? 0);
   const plotH = H - PAD_B - PAD_T;
   const slot = W / bars.length;
-  const barW = Math.min(36, slot * 0.6);
+  const barW = Math.min(40, slot * 0.6);
   const y = (v: number) => PAD_T + plotH * (1 - v / max);
 
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"

@@ -6,7 +6,7 @@ import { perPeriod } from "@/lib/dues/period";
 import { formatCents } from "@/lib/money";
 import { useOrg } from "../../../../_components/OrgProvider";
 import { useAuthFetch } from "../../../../_components/useAuthFetch";
-import { PageHeader, treasurerPage } from "../../_components/PageHeader";
+import { PageHeader, treasurerFormPage } from "../../_components/PageHeader";
 
 // Budget builder: the club's categories, how much each may spend per month or
 // semester, and what's been spent so far. The reimbursement policy reads
@@ -95,8 +95,11 @@ export default function BudgetPage() {
   const archived = categories?.filter((c) => c.archived) ?? [];
 
   return (
-    <main className={`${treasurerPage} *:max-w-3xl`}>
-      <PageHeader title="Budget" />
+    <main className={treasurerFormPage}>
+      <PageHeader
+        title="Budget"
+        subtitle="Small receipts are paid instantly only while their category has budget left. A receipt that would go over budget goes to you instead. A category with a $0.00 budget sends everything in it to you."
+      />
 
       {!isTreasurer || problem === "forbidden" ? (
         <p>This page is for the club treasurer.</p>
@@ -106,11 +109,6 @@ export default function BudgetPage() {
         </p>
       ) : (
         <>
-          <p className="text-[13px] text-muted">
-            Small receipts are paid instantly only while their category has budget left. A receipt that would go
-            over budget goes to you instead. A category with a $0.00 budget sends everything in it to you.
-          </p>
-
           {notice && (
             <p role="status" className="glass rounded-[12px] px-4 py-3 text-[13px]">
               {notice}

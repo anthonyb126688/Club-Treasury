@@ -18,11 +18,11 @@ export function OnboardingShell({ children }: { children: ReactNode }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col gap-8 px-4 py-10">
       <header className="flex items-center justify-between gap-4">
-        <Link href="/" aria-label="Club Treasury home">
+        <Link href="/" aria-label="Club Treasury home" className="flex">
           <Wordmark />
         </Link>
         {authenticated && (
-          <button type="button" onClick={logout} className={`text-sm underline ${mutedText}`}>
+          <button type="button" onClick={logout} className={`-my-1 -mr-2 min-h-11 px-2 text-sm underline underline-offset-4 ${mutedText}`}>
             Log out
           </button>
         )}

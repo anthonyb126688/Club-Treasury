@@ -60,6 +60,8 @@ export function RequestTabs({
     <section className="flex min-w-0 flex-col gap-3">
       <SegmentedControl
         label="Requests"
+        // Hug the tabs on wide screens; on phones they scroll, with a fade hinting at more.
+        className="self-start max-sm:pr-6 max-sm:[mask-image:linear-gradient(to_right,black_calc(100%-2rem),transparent)]"
         value={tab}
         onChange={onTab}
         options={TABS.map((t) => {

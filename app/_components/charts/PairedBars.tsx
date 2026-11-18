@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { ChartEmpty, DataTable, growStyle, Tooltip } from "./common";
+import { ChartEmpty, DataTable, growStyle, Tooltip, useChartWidth } from "./common";
 
 export type Pair = { key: string; label: string; inValue: number; outValue: number; inText: string; outText: string };
 
-const W = 320;
-const H = 150;
+const H = 170;
 const PAD_B = 22;
 const PAD_T = 8;
 const GREEN = "#248A3D";
@@ -14,15 +13,16 @@ const GREEN = "#248A3D";
 // Money in (green outline) vs money out (black) per month.
 export function PairedBars({ pairs, ariaLabel, emptyText }: { pairs: Pair[]; ariaLabel: string; emptyText: string }) {
   const [active, setActive] = useState<number | null>(null);
+  const [ref, W] = useChartWidth();
   if (pairs.length === 0 || pairs.every((p) => p.inValue === 0 && p.outValue === 0)) return <ChartEmpty text={emptyText} />;
 
   const max = Math.max(1, ...pairs.flatMap((p) => [p.inValue, p.outValue]));
   const plotH = H - PAD_B - PAD_T;
   const slot = W / pairs.length;
-  const barW = Math.min(16, slot * 0.3);
+  const barW = Math.min(28, slot * 0.3);
 
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"

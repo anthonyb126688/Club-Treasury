@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChartEmpty, DataTable, Tooltip } from "./common";
+import { ChartEmpty, DataTable, Tooltip, useChartWidth } from "./common";
 
 export type Point = { key: string; label: string; value: number; valueText: string };
 
@@ -18,9 +18,9 @@ export function LineChart({
   height?: number;
 }) {
   const [active, setActive] = useState<number | null>(null);
+  const [ref, W] = useChartWidth(200);
   if (points.length === 0 || points.every((p) => p.value === 0)) return <ChartEmpty text={emptyText} />;
 
-  const W = 200;
   const H = height;
   const max = Math.max(1, ...points.map((p) => p.value));
   const step = points.length > 1 ? W / (points.length - 1) : 0;
@@ -28,7 +28,7 @@ export function LineChart({
   const path = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
 
   return (
-    <div className="relative">
+    <div ref={ref} className="relative">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"

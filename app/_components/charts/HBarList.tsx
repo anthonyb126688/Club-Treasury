@@ -32,9 +32,10 @@ export function HBarList({ rows, ariaLabel, emptyText }: { rows: HBar[]; ariaLab
                   <span className="truncate text-[15px] font-medium">{r.label}</span>
                   {r.marker}
                 </span>
-                <span className="shrink-0 text-right">
+                {/* Phones stack the total over its detail so the name has room. */}
+                <span className="flex shrink-0 flex-col items-end text-right sm:flex-row sm:items-baseline sm:gap-1.5">
                   <span className="text-[15px] font-semibold tabular-nums">{r.valueText}</span>
-                  {r.sub && <span className="ml-1.5 text-[12px] text-muted">{r.sub}</span>}
+                  {r.sub && <span className="text-[12px] text-muted">{r.sub}</span>}
                 </span>
               </div>
               <div className="mt-1.5 h-1.5 rounded-full bg-black/[0.07]">

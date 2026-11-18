@@ -2,6 +2,7 @@
 
 import { ExternalLink } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { receiptDay } from "@/lib/dashboard/format";
 import type { RequestDetail } from "@/lib/dashboard/types";
 import { Button } from "../../../../_components/ui/Button";
 import { ErrorState, LoadingBlocks } from "../../../../_components/ui/EmptyState";
@@ -9,6 +10,10 @@ import { Sheet } from "../../../../_components/ui/Sheet";
 import { ReceiptPhoto } from "./ReceiptPhoto";
 
 const NOTE_MAX = 500;
+
+// Approve / Deny stay pinned to the bottom of the panel while the treasurer scrolls the details.
+const actionBar =
+  "sticky -bottom-[calc(1.25rem+env(safe-area-inset-bottom))] -mx-4 -mb-[calc(1.25rem+env(safe-area-inset-bottom))] border-t border-black/[0.06] bg-[rgb(250_250_252/0.96)] px-4 pt-3 pb-[calc(1.25rem+env(safe-area-inset-bottom))]";
 
 const longDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -103,11 +108,13 @@ function PanelBody({
     <div className="flex flex-col gap-5">
       <div className="glass flex items-start justify-between gap-3 rounded-[16px] p-4">
         <div className="min-w-0">
-          <p className="truncate text-[17px] font-semibold">{d.vendor ?? "Unknown store"}</p>
-          <p className="text-[13px] break-all text-muted">
-            {d.memberName}
-            {d.memberEmail && d.memberEmail !== d.memberName ? ` · ${d.memberEmail}` : ""}
-          </p>
+          <p className="text-[17px] leading-snug font-semibold break-words">{d.vendor ?? "Unknown store"}</p>
+          <p className="mt-0.5 text-[13px] break-words text-muted">{d.memberName}</p>
+          {d.memberEmail && d.memberEmail !== d.memberName && (
+            <p className="truncate text-[13px] text-muted" title={d.memberEmail}>
+              {d.memberEmail}
+            </p>
+          )}
           <p className="text-[13px] text-muted">Sent {longDate(d.submittedAt)}</p>
         </div>
         <div className="shrink-0 text-right">
@@ -118,10 +125,10 @@ function PanelBody({
 
       {(d.reasons.length > 0 || d.payoutError) && (
         <Section title="Why it needs you">
-          <ul className="flex flex-col gap-1 rounded-[12px] bg-black/[0.05] px-3 py-2.5 text-[13px]">
-            {d.payoutError && <li className="font-semibold text-alert">• {d.payoutError}</li>}
+          <ul className="flex list-disc flex-col gap-1 rounded-[12px] bg-black/[0.05] py-2.5 pr-3 pl-7 text-[13px]">
+            {d.payoutError && <li className="font-semibold text-alert">{d.payoutError}</li>}
             {d.reasons.map((r, i) => (
-              <li key={i}>• {r}</li>
+              <li key={i}>{r}</li>
             ))}
           </ul>
         </Section>
@@ -158,7 +165,7 @@ function PanelBody({
             <ReceiptPhoto url={d.duplicateOf.photoUrl} label="Earlier one" />
           </div>
           <p className="text-[13px] text-muted">
-            Earlier: {d.duplicateOf.vendor ?? "Unknown store"}, {d.duplicateOf.amount}, {d.duplicateOf.date ?? "no date"}
+            Earlier: {d.duplicateOf.vendor ?? "Unknown store"}, {d.duplicateOf.amount}, {d.duplicateOf.date ? receiptDay(d.duplicateOf.date) : "no date"}
             {" — "}sent by {d.duplicateOf.memberName} on {longDate(d.duplicateOf.submittedAt)} (
             {d.duplicateOf.statusLabel.toLowerCase()})
           </p>
@@ -196,13 +203,13 @@ function PanelBody({
             <p className="mt-2 text-[13px] text-warn-text">The AI didn&apos;t think this photo was a receipt.</p>
           )}
           {d.summary && <p className="mt-2 text-[13px]">{d.summary}</p>}
-          <p className="mt-1 text-[13px] text-muted">Receipt date: {d.receiptDate ?? "not found"}</p>
+          <p className="mt-1 text-[13px] text-muted">Receipt date: {d.receiptDate ? receiptDay(d.receiptDate) : "not found"}</p>
           {d.lineItems.length > 0 && (
             <ul className="mt-2 text-[13px] text-muted">
               {d.lineItems.map((li, i) => (
-                <li key={i} className="flex justify-between gap-2">
-                  <span className="truncate">{li.description}</span>
-                  <span className="tabular-nums">{li.amount}</span>
+                <li key={i} className="flex justify-between gap-3">
+                  <span className="min-w-0 break-words">{li.description}</span>
+                  <span className="shrink-0 tabular-nums">{li.amount}</span>
                 </li>
               ))}
             </ul>
@@ -219,7 +226,7 @@ function PanelBody({
       {(d.actions.approve || d.actions.deny) &&
         (denying ? (
           <form
-            className="flex flex-col gap-2"
+            className={`${actionBar} flex flex-col gap-2`}
             onSubmit={(e) => {
               e.preventDefault();
               if (trimmed) onDeny(trimmed);
@@ -251,7 +258,7 @@ function PanelBody({
             </div>
           </form>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className={`${actionBar} flex flex-col gap-2`}>
             <div className="grid grid-cols-2 gap-3">
               <Button variant="secondary" disabled={busy} onClick={() => setDenying(true)}>
                 Deny

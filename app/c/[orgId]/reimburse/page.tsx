@@ -3,6 +3,7 @@
 import { Camera, Check } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { receiptDay } from "@/lib/dashboard/format";
 import { outcomeStep, PAYOUT_PROBLEM_REASON, type SubmitOutcome } from "@/lib/member/status";
 import type { Category } from "@/lib/policy/rules";
 import { parseDollarsToCents } from "@/lib/reimburse/decide";
@@ -175,7 +176,7 @@ export default function ReimbursePage() {
             {/* Receipt text is untrusted: shown as plain text only. */}
             <p className="mt-1 text-[15px] font-medium">{step.reading.summary}</p>
             <p className="mt-2 text-[13px] text-muted">
-              {step.reading.vendor ?? "Unknown store"} · {step.reading.date ?? "no date found"}
+              {step.reading.vendor ?? "Unknown store"} · {step.reading.date ? receiptDay(step.reading.date) : "no date found"}
             </p>
           </GlassCard>
 

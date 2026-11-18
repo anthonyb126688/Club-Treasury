@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { EmptyState } from "../ui/EmptyState";
 
 // Shared bits for the hand-made SVG charts: black and grays only; orange
@@ -20,6 +20,26 @@ export const TONE_COLOR = {
   alert: "#FF3B30",
 } as const;
 export type Tone = keyof typeof TONE_COLOR;
+
+/**
+ * The chart's real width in pixels, so SVG charts draw at 1:1 instead of
+ * stretching a small drawing (text and bars blow up on laptops otherwise).
+ * Attach `ref` to the chart's wrapper div.
+ */
+export function useChartWidth(fallback = 320) {
+  const [width, setWidth] = useState(fallback);
+  const observer = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: HTMLElement | null) => {
+    observer.current?.disconnect();
+    observer.current = null;
+    if (!el) return;
+    const measure = () => setWidth(Math.max(160, Math.round(el.clientWidth)));
+    measure();
+    observer.current = new ResizeObserver(measure);
+    observer.current.observe(el);
+  }, []);
+  return [ref, width] as const;
+}
 
 /** Bars grow from the bottom (or left) and ease to new values; reduced motion turns it off (globals.css). */
 export const growStyle = (axis: "y" | "x", scale: number) =>

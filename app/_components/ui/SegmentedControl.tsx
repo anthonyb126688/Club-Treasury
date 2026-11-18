@@ -30,7 +30,11 @@ export function SegmentedControl<T extends string>({
             type="button"
             role="tab"
             aria-selected={active}
-            onClick={() => onChange(o.value)}
+            onClick={(e) => {
+              onChange(o.value);
+              // When the tabs scroll sideways (phones), bring the chosen one fully into view.
+              e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+            }}
             className={`min-h-9 shrink-0 rounded-full px-3.5 text-[13px] font-semibold whitespace-nowrap transition-colors ${
               active ? "bg-white text-ink shadow-[0_1px_3px_rgb(0_0_0/0.12)]" : "text-zinc-600 hover:text-ink"
             }`}

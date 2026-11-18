@@ -509,7 +509,7 @@ function MemberActions({
         </>
       ) : (
         <>
-          <button type="button" disabled={anyBusy} onClick={() => onAction("promote")} className={primary}>
+          <button type="button" disabled={anyBusy} onClick={() => onAction("promote")} className={outline}>
             Make co-treasurer
           </button>
           <button

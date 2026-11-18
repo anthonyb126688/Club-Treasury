@@ -28,3 +28,11 @@ export function reasonMessages(reasons: unknown): string[] {
     .map((r) => (r && typeof r === "object" && "message" in r ? (r as { message: unknown }).message : null))
     .filter((m): m is string => typeof m === "string" && m.length > 0);
 }
+
+/** A receipt's "2026-11-17" as "Nov 17, 2026" (no time-zone shift); anything else is returned as-is. */
+export function receiptDay(ymd: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return ymd;
+  const d = new Date(`${ymd}T12:00:00Z`);
+  if (Number.isNaN(d.getTime())) return ymd;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+}

@@ -107,7 +107,7 @@ export default function InsightsPage() {
 function Card({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
   return (
     <section className="glass flex min-w-0 flex-col gap-4 rounded-[16px] p-4 sm:p-5">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h2 className="text-[17px] font-semibold">{title}</h2>
         {aside}
       </div>
@@ -177,8 +177,8 @@ function InsightsBody({ data, orgId, range }: { data: InsightsResponse; orgId: s
                       {p.status === "ahead_of_pace" && <span className="font-medium text-warn-text"> · ahead of pace</span>}
                       {p.status === "over_budget" && <span className="font-medium text-alert"> · over budget</span>}
                     </span>
-                    <span className="text-muted tabular-nums">
-                      {p.spent.text} of {p.budget.text}
+                    <span className="shrink-0 text-muted tabular-nums">
+                      {p.budget.cents > 0 ? `${p.spent.text} of ${p.budget.text}` : `${p.spent.text} spent · no budget`}
                     </span>
                   </div>
                   <ProgressBar

@@ -15,7 +15,7 @@ export function ReceiptPhoto({ url, label }: { url: string | null; label: string
 
   if (!url) {
     return (
-      <div className="flex aspect-[3/4] w-full items-center justify-center rounded-xl bg-zinc-100 text-sm text-zinc-500 dark:bg-zinc-900">
+      <div className="flex h-24 w-full items-center justify-center rounded-xl bg-black/[0.05] text-sm text-zinc-500">
         No photo
       </div>
     );

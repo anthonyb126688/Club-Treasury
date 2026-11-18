@@ -21,7 +21,7 @@ export function OverviewCards({ overview, orgId }: { overview: Overview; orgId: 
         <StatTile
           label={`Dues · ${dues.periodLabel}`}
           value={dues.collected}
-          note={`${dues.paidCount} of ${dues.memberCount} paid · of ${dues.expected}`}
+          note={`${dues.paidCount} of ${dues.memberCount} paid · ${dues.amount} each`}
         />
         <StatTile label="Spent this month" value={overview.spentThisMonth} note={overview.monthLabel} />
         <StatTile
