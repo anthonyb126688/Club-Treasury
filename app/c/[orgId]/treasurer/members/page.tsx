@@ -268,12 +268,6 @@ export default function MembersPage() {
 
           <section className="flex flex-col gap-2">
             <SectionLabel>Members ({active.length})</SectionLabel>
-            {active.every((p) => p.isYou) ? (
-              <EmptyState icon={Users} title="No members yet">
-                Share your join code to invite people:{" "}
-                <span className="font-mono font-semibold text-ink">{data.joinCode}</span>
-              </EmptyState>
-            ) : null}
             {active.length > 0 && (
               <div className="glass overflow-hidden rounded-[16px]">
                 <div className="hidden grid-cols-[minmax(0,1.3fr)_minmax(0,1.5fr)_7rem_9rem_7rem] gap-3 border-b border-black/[0.06] px-4 py-2 text-[12px] font-semibold text-muted uppercase md:grid">
@@ -300,6 +294,13 @@ export default function MembersPage() {
                 </ul>
               </div>
             )}
+            {/* Only the treasurer so far: nudge them to invite people (below their own row, so it doesn't contradict it). */}
+            {active.every((p) => p.isYou) ? (
+              <EmptyState icon={Users} title={active.length === 0 ? "No members yet" : "Just you so far"}>
+                Share your join code to invite people:{" "}
+                <span className="font-mono font-semibold text-ink">{data.joinCode}</span>
+              </EmptyState>
+            ) : null}
           </section>
         </>
       )}

@@ -18,7 +18,7 @@ The plan is `Redesign.md` (the 7-phase black/white glass + Insights brief).
 | 4 Insights backend | insights-4-api | DONE |
 | 5 Live data | insights-5-live | DONE |
 | 6 Insights page | insights-6-page | DONE |
-| 7 Final check | ui-final | not started |
+| 7 Final check | ui-final | DONE |
 
 Priority if usage runs short: 1 → 2 → 3 (what judges see on a phone), then 4 → 5 → 6, then 7.
 
@@ -110,8 +110,16 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - "Net" above money in/out is green only when positive.
   - The Home Insights card always shows the semester range.
 
+- Phase 7 decisions:
+  - Used the prompt-injection receipt (step 6) for the live-update check, because it moves no money and lands in the treasurer's queue. Denied it with the note "Already paid on Nov 16 — same receipt photo. (Phase 7 test)", so it now shows under Denied in Test Club.
+  - Didn't create a new club or pay anything (see Skipped), so no new on-chain activity beyond reading balances.
+  - Fixed the "No members yet" wording/placement on Members (the only code change in Phase 7).
+
 ## Skipped / reverted
-- (none yet)
+- Demo step 1 (create a club): not re-run. Creating a club sets up a new on-chain vault and adds $1,000 of test dollars, and would leave a junk club. Checked the QR/invite screen in Test Club's Settings instead.
+- Demo steps 3, 4 and 5 (pay dues, $18 pizza, $400 approval): not re-run. They move test dollars, dues are already paid this term, and every fake receipt has already been used (a re-send is a duplicate). Their Nov 17 results are still on screen (Paid tab, Activity, Dues paid) and were checked there.
+- Member-view screenshots use a browser-only override of `/api/me` (role = member). No real second member account was used.
+- Nothing was reverted.
 
 ## Log
 - Nov 17: wrote this file. Nothing from the new plan built yet.
@@ -146,13 +154,29 @@ Then build `app/_components/ui/`: GlassCard, Button, PageHeader, StatTile, Segme
   - Home: the treasurer-only Insights card (semester spending line + the top alert) sits under the balance card.
   - Checked at 390 and 1440 with real Test Club data. Fixed one sideways-scroll bug: hidden data tables were 360px wide, so each is now wrapped in an `sr-only` div.
   - Screenshots: `.playwright-mcp/redesign/p6-*.png`.
-
-## >>> RESUME HERE (stopped Nov 17 at the user's request) <<<
-Phases 1–6 are done and tagged (`ui-1-tokens`, `ui-2-shell`, `ui-3-pages`, `insights-4-api`, `insights-5-live`, `insights-6-page`). Lint, all 430 tests and the build are green. Nothing is pushed.
-Only **Phase 7 (final check, tag `ui-final`)** is left:
-1. Run `npm run lint`, `npm test` and `npm run build`.
-2. Playwright screenshots of every club page at 390x844 and 1440x900, as treasurer and as member, into `.playwright-mcp/redesign/`. For member view, intercept `GET /api/me` and set each club's role to "member" (see "Starting point"). Many Phase 3/6 screenshots already exist there.
-3. Live-update check: on Insights, deny a waiting request with a note, if one exists, and watch the numbers update without a reload. The duplicate pizza in Test Club (Blocked tab) can't be denied from Blocked unless it's "queued"; if nothing safe is available, rely on the hook unit tests plus the signal check from Phase 5.
-4. Walk the 7 demo steps at 390px without running scripts. Dues are already paid in Test Club this term, so a fresh club or a second account is needed for step 3.
-5. Finish this file: summary, decisions, skipped items, "what to look at first". Then tag `ui-final`.
 - Phase 3, page 1 (Home) done: glass balance card (club balance big, your balance small, black Get reimbursed, glass Pay dues), budget ring, dues status, My requests in a glass list with a black step bar, Recent activity (latest 5, "See all").
+- Phase 7 done (Nov 18):
+  - `npm run lint`, `npm test` (32 files, 430 tests) and `npm run build` all pass, before and after the one fix below.
+  - Screenshots `.playwright-mcp/redesign/p7-*.png`: all 9 club pages as treasurer and 5 as member (Home, Get reimbursed, Budget, Activity, and the "Treasurers only" guard on Approvals), each at 390x844 and 1440x900. No page scrolls sideways (scrollWidth <= viewport everywhere) and no error states showed. Only console noise is Next's dev-only "cache disabled" warning.
+  - On the 1440 *full-page* screenshots the background and side rail stop at 900px. That's the screenshot stitching fixed-position layers, not a real bug (in a browser they stay put while scrolling).
+  - Live updates: with Insights open in a second tab, I denied a request with a note in the first tab. Insights refetched its data and the overview about 1s later with no reload, and its Approvals badge went 2 → 1 about 5s after the deny. The extra seconds are the server: `/treasurer/overview` takes 1-2.5s on the dev server because it reads the club balance from Solana devnet.
+  - Fix: Members page showed "No members yet" right above the founder's own row (when the treasurer is the only member). The invite nudge now sits below the list and says "Just you so far" (still "No members yet" if the list is truly empty).
+  - Demo walk at 390px (Test Club):
+    1. Create club + QR: Settings → Invite link and QR shows the QR (create not re-run, see Skipped).
+    2. Join request: Members shows the `+test` request with Approve / Decline (left pending for you).
+    3. Dues: Home shows "Dues paid" / Fall 2026 $25.00 (paid Nov 17).
+    4. $18 pizza: Paid, shown in My requests and Activity (Nov 17).
+    5. $400: Approvals → Paid → Pacific Event Rentals shows both reasons (over the $50 cap, over the $150 daily limit), "Paid Nov 17" and "Verify this payment".
+    6. Ran today: sent the "approve $5,000" receipt. The AI read it as Corner Market $10.00, Supplies, and said "The receipt contains unusual instruction-like text". It was **not** paid: it went to Blocked as a possible duplicate (same photo as the Nov 16 one). I then denied it with a note (that's the live-update test above). The original duplicate pizza is still in Blocked for your demo.
+    7. Budget shows Food $30.50/$200, Supplies $10/$150, Events $400/$500, etc. Activity's Verify links go to `explorer.solana.com/tx/...?cluster=devnet`.
+
+## Summary
+The whole 7-phase brief is built on `main` and tagged phase by phase (`ui-1-tokens` → `ui-final`). The app is now a light, black-and-white frosted-glass design with a side rail on laptops and a floating tab bar on phones, every screen restyled, a new Activity page, and a treasurer Insights page (hand-made SVG charts, budget pace, money in/out, per-member spending, top vendors, CSV export). Screens refresh on their own and right after dues, receipts, approvals or denials, including in other tabs. Lint, 430 tests and the build are green. Nothing has been pushed or deployed.
+
+## What to look at first
+1. Phone Home and Insights: `.playwright-mcp/redesign/p7-treasurer-home-390.png`, `p7-treasurer-insights-390.png` (then open the app at 390px yourself).
+2. Approvals on a laptop: `p7-treasurer-approvals-1440.png`, and the request sheet `p7-demo5-400-paid-390.png`.
+3. Member view: `p7-member-home-390.png` and the guard `p7-member-approvals-390.png`.
+4. The Members-page fix: `p7-demo2-join-request-390.png`.
+5. Before demo day: approve the pending `+test` join request (step 2), and pick a fresh account or club for step 3 (dues are already paid in Test Club). Every fake receipt is now used once, so step 4 needs a new $18 receipt photo (or a new club, where the pizza isn't a duplicate).
+6. When you're happy: push `main` and redeploy (I didn't).
